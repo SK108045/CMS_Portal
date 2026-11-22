@@ -1,3 +1,4 @@
+import { has, read, management, roleLabel } from "./permissions";
 import { useEffect, useState } from "react";
 import {
   BookOpen,
@@ -36,10 +37,13 @@ const nav = [
   ["approvals", "Approvals", CheckCheck],
   ["expenses", "Expenses", Receipt],
   ["suppliers", "Suppliers", Truck],
+  ["invoices", "Invoices", Files],
   ["payments", "Payments", CreditCard],
   ["petty-accounts", "Petty Cash", Coins],
   ["income", "Income & Donations", HeartHandshake],
+  ["petty-requests", "Petty Cash Requests", Coins],
   ["inventory", "Inventory", Package],
+  ["movements", "Stock Movements", Package],
   ["assets", "Assets", Monitor],
   ["documents", "Documents", Files],
   ["reports", "Reports", ChartNoAxesCombined],
@@ -58,7 +62,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [logout, setLogout] = useState(false);
-  const admin = user?.role === "ADMIN";
+  const managesSchool = management(user);
   useEffect(() => {
     api("auth/me")
       .then(setUser)
@@ -90,10 +94,13 @@ export default function App() {
       "inventory",
       "assets",
       "locations",
-      ...(user?.role === "ADMIN" ? ["suppliers", "invoices"] : []),
+      "suppliers",
+      "invoices",
     ];
     const entries = await Promise.all(
-      resources.map(async (r) => [r, await api("records/" + r)] as const),
+      resources
+        .filter((r) => read(user, r))
+        .map(async (r) => [r, await api("records/" + r)] as const),
     );
     setLookups(Object.fromEntries(entries));
   }
@@ -186,35 +193,25 @@ export default function App() {
         </div>
       </main>
     );
-  const allowed = admin
-    ? nav
-    : nav.filter(([p]) =>
-        [
-          "dashboard",
-          "departments",
-          "budgets",
-          "requests",
-          "expenses",
-          "petty-accounts",
-          "inventory",
-          "assets",
-          "documents",
-          "audit",
-          "settings",
-        ].includes(p),
-      );
-  const allowedPaths = admin
-    ? Object.keys(schemas).concat("dashboard", "reports", "settings")
-    : [
-        ...allowed.map((n) => String(n[0])),
-        "petty-transactions",
-        "petty-requests",
-        "movements",
-        "reports",
-        "income",
-        "payments",
-        "invoices",
-      ];
+  const allowed = nav.filter(
+    ([resource]) =>
+      resource === "dashboard" ||
+      resource === "settings" ||
+      (resource === "approvals"
+        ? has(user, "requests.approve") || has(user, "audit.view.all")
+        : resource === "reports"
+          ? !!user.reports?.length
+          : resource === "petty-accounts"
+            ? has(user, "petty.view")
+            : read(user, resource)),
+  );
+  const allowedPaths = Object.keys(schemas)
+    .filter((resource) => read(user, resource))
+    .concat(
+      "dashboard",
+      "settings",
+      ...(user.reports?.length ? ["reports"] : []),
+    );
   const route = path.split("?")[0];
   const current = allowedPaths.includes(route) ? route : "dashboard";
   return (
@@ -227,7 +224,7 @@ export default function App() {
           </div>
         </div>
         <div className="portal-label">
-          {admin ? "MANAGEMENT PORTAL" : "DEPARTMENT PORTAL"}
+          {managesSchool ? "MANAGEMENT PORTAL" : "DEPARTMENT PORTAL"}
         </div>
         <nav>
           {allowed.map(([p, t, Icon]) => (
@@ -237,11 +234,13 @@ export default function App() {
               className={current === p ? "selected" : ""}
             >
               <Icon size={18} />
-              {!admin && p === "departments"
+              {!managesSchool && p === "departments"
                 ? "My Department"
-                : !admin && p === "audit"
+                : !managesSchool && p === "audit"
                   ? "Activity"
-                  : t}
+                  : p === "settings" && !has(user, "settings.manage")
+                    ? "My Account"
+                    : t}
             </a>
           ))}
         </nav>
@@ -249,12 +248,7 @@ export default function App() {
           <span className="avatar">{user.name[0]}</span>
           <div>
             <strong>{user.name}</strong>
-            <small>
-              {admin
-                ? "School Administrator"
-                : lookups.departments?.find((d) => d.id === user.departmentId)
-                    ?.name}
-            </small>
+            <small>{roleLabel(user.role)}</small>
           </div>
           <button aria-label="Sign out" onClick={() => setLogout(true)}>
             <LogOut size={17} />
@@ -291,16 +285,22 @@ export default function App() {
         </header>
         <main className="content">
           {current === "dashboard" ? (
-            <Dashboard go={go} lookups={lookups} />
+            <Dashboard go={go} lookups={lookups} user={user} />
           ) : current === "reports" ? (
-            <Reports lookups={lookups} />
+            <Reports key={path} lookups={lookups} user={user} />
           ) : current === "settings" ? (
-            <SettingsPage admin={!!admin} notify={setToast} />
+            <SettingsPage user={user} notify={setToast} />
           ) : (
             <Records
               key={path}
-              resource={current === "approvals" ? "requests" : current}
-              approvalQueue={current === "approvals"}
+              resource={
+                current === "approvals" && has(user, "requests.approve")
+                  ? "requests"
+                  : current
+              }
+              approvalQueue={
+                current === "approvals" && has(user, "requests.approve")
+              }
               lookups={lookups}
               user={user}
               refresh={refresh}
@@ -340,10 +340,10 @@ export default function App() {
   );
 }
 function SettingsPage({
-  admin,
+  user,
   notify,
 }: {
-  admin: boolean;
+  user: Row;
   notify: (s: string) => void;
 }) {
   const [old, setOld] = useState("");
@@ -357,17 +357,23 @@ function SettingsPage({
           <p>Account security and school reference data.</p>
         </div>
       </div>
-      {admin && (
+      {(has(user, "budgets.manage") || has(user, "locations.manage")) && (
         <div className="actions settings-links">
-          <a className="button" href="#categories">
-            Budget categories
-          </a>
-          <a className="button" href="#locations">
-            Stock locations
-          </a>
-          <a className="button" href="#adjustments">
-            Budget adjustment history
-          </a>
+          {has(user, "budgets.manage") && (
+            <a className="button" href="#categories">
+              Budget categories
+            </a>
+          )}
+          {has(user, "locations.manage") && (
+            <a className="button" href="#locations">
+              Stock locations
+            </a>
+          )}
+          {read(user, "adjustments") && (
+            <a className="button" href="#adjustments">
+              Budget adjustment history
+            </a>
+          )}
         </div>
       )}
       <section className="panel narrow">

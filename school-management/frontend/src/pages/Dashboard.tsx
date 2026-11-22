@@ -1,3 +1,4 @@
+import { has, read } from "../permissions";
 import { useEffect, useState } from "react";
 import {
   ArrowUpRight,
@@ -18,9 +19,11 @@ import {
 export function Dashboard({
   go,
   lookups,
+  user,
 }: {
   go: (s: string) => void;
   lookups: Record<string, Row[]>;
+  user: Row;
 }) {
   const [data, setData] = useState<Row>();
   const [error, setError] = useState("");
@@ -43,13 +46,19 @@ export function Dashboard({
     income: ChartSummary;
     requests: ChartSummary;
   };
+  const financial = read(user, "payments") && read(user, "expenses");
+  const canBudget = read(user, "budgets");
+  const canIncome = read(user, "income");
+  const stock = data.operationalCharts as ChartSummary | undefined;
   const cards = [
     ["Total budget", data.budget, "budgets", Wallet],
     ["Committed", data.committed, "requests", ClipboardCheck],
     [
       "Total spent",
       data.spent,
-      "reports?name=Transaction%20Report",
+      user.reports?.includes("Transaction Report")
+        ? "reports?name=Transaction%20Report"
+        : "budgets",
       CircleDollarSign,
     ],
     ["Available balance", data.remaining, "budgets", ShieldCheck],
@@ -82,73 +91,127 @@ export function Dashboard({
         </div>
       </div>
       <div className="cards">
-        {cards.map(([name, n, path, Icon], i) => (
-          <button
-            key={name}
-            className={"metric metric-" + i}
-            onClick={() => go(path)}
-          >
-            <div className="metric-top">
-              <span>{name}</span>
-              <span className="metric-icon">
-                <Icon size={18} />
-              </span>
-            </div>
-            <strong>{kes(n)}</strong>
-            <small>
-              {i === 1
-                ? "Reserved, awaiting payment"
-                : i === 3
-                  ? "After spending and commitments"
-                  : "Open financial records"}{" "}
-              <ArrowUpRight size={12} />
-            </small>
-          </button>
-        ))}
+        {canBudget &&
+          cards.map(([name, n, path, Icon], i) => (
+            <button
+              key={name}
+              className={"metric metric-" + i}
+              onClick={() => go(path)}
+            >
+              <div className="metric-top">
+                <span>{name}</span>
+                <span className="metric-icon">
+                  <Icon size={18} />
+                </span>
+              </div>
+              <strong>{kes(n)}</strong>
+              <small>
+                {i === 1
+                  ? "Reserved, awaiting payment"
+                  : i === 3
+                    ? "After spending and commitments"
+                    : "Open financial records"}{" "}
+                <ArrowUpRight size={12} />
+              </small>
+            </button>
+          ))}
       </div>
+      {!canBudget && data.operations && (
+        <div className="cards">
+          {[
+            ["Inventory items", data.operations.inventoryItems, "inventory"],
+            ["Approved orders", data.operations.receivingRequests, "requests"],
+            ["Registered assets", data.operations.assets, "assets"],
+            ["At reorder level", data.operations.lowStock, "inventory"],
+          ].map(([label, n, route]) => (
+            <button
+              key={label}
+              className="metric"
+              onClick={() => go(String(route))}
+            >
+              <span>{label}</span>
+              <strong>{n}</strong>
+              <small>View authorised records ↗</small>
+            </button>
+          ))}
+        </div>
+      )}
       <div className="analytics-grid analytics-top">
-        <ChartCard
-          className="trend-feature"
-          eyebrow="CASH FLOW"
-          title="The financial year, at a glance"
-          subtitle="Actual payments, direct expenses and petty cash spending against cash income."
-        >
-          <TrendChart
-            spending={charts.spending.trend}
-            income={charts.income.trend}
-            onOpen={(month) =>
-              go(
-                "reports?name=Transaction%20Report&from=" +
-                  month +
-                  "-01&to=" +
-                  month +
-                  "-" +
-                  new Date(
-                    Number(month.slice(0, 4)),
-                    Number(month.slice(5)),
-                    0,
-                  ).getDate(),
-              )
-            }
-          />
-        </ChartCard>
-        <ChartCard
-          eyebrow="BUDGET POSITION"
-          title="Reserved. Spent. Available."
-          subtitle="Unpaid approvals stay separate from money spent."
-        >
-          <DonutChart
-            points={charts.budgets.distribution}
-            centerLabel="Resources allocated"
-            onSelect={() => go("budgets")}
-          />
-          {data.remaining < 0 && (
-            <p className="chart-warning">
-              Over budget by {kes(-data.remaining)}. Available balance is shown
-              as zero in the chart.
-            </p>
-          )}
-        </ChartCard>
+        {financial ? (
+          <ChartCard
+            className="trend-feature"
+            eyebrow="CASH FLOW"
+            title="The financial year, at a glance"
+            subtitle="Actual payments, direct expenses and petty cash spending against cash income."
+          >
+            <TrendChart
+              spending={charts.spending.trend}
+              income={charts.income.trend}
+              onOpen={(month) =>
+                go(
+                  "reports?name=Transaction%20Report&from=" +
+                    month +
+                    "-01&to=" +
+                    month +
+                    "-" +
+                    new Date(
+                      Number(month.slice(0, 4)),
+                      Number(month.slice(5)),
+                      0,
+                    ).getDate(),
+                )
+              }
+            />
+          </ChartCard>
+        ) : (
+          stock && (
+            <ChartCard
+              eyebrow="STORES & DEPARTMENT INVENTORY"
+              title="Stock at a glance"
+              subtitle="Quantities use each item's own unit."
+            >
+              <BarChart
+                points={stock.comparison}
+                unit="quantity"
+                primary="Quantity"
+                onSelect={() => go("inventory")}
+              />
+            </ChartCard>
+          )
+        )}
+        {canBudget ? (
+          <ChartCard
+            eyebrow="BUDGET POSITION"
+            title="Reserved. Spent. Available."
+            subtitle="Unpaid approvals stay separate from money spent."
+          >
+            <DonutChart
+              points={charts.budgets.distribution}
+              centerLabel="Resources allocated"
+              onSelect={() => go("budgets")}
+            />
+            {data.remaining < 0 && (
+              <p className="chart-warning">
+                Over budget by {kes(-data.remaining)}. Available balance is
+                shown as zero in the chart.
+              </p>
+            )}
+          </ChartCard>
+        ) : (
+          stock && (
+            <ChartCard
+              eyebrow="INVENTORY CLASSIFICATIONS"
+              title="Resources in stores"
+            >
+              <DonutChart
+                points={stock.distribution}
+                unit="count"
+                centerLabel="Inventory items"
+                onSelect={() => go("inventory")}
+              />
+            </ChartCard>
+          )
+        )}
       </div>
       <div className="quick-stats analytics-stats">
         {[
@@ -161,64 +224,83 @@ export function Dashboard({
           ["Petty cash balance", kes(data.pettyCash), "petty-accounts"],
           ["Donations & grants", kes(data.donations), "income"],
           ["Other income", kes(data.otherIncome), "income"],
-        ].map(([label, n, path]) => (
-          <button key={label} onClick={() => go(String(path))}>
-            <span>{label}</span>
-            <strong>{n}</strong>
-            <ArrowUpRight size={13} />
-          </button>
-        ))}
+        ]
+          .filter(([, , path]) =>
+            path === "requests"
+              ? read(user, "requests")
+              : String(path).startsWith("reports")
+                ? financial
+                : path === "petty-accounts"
+                  ? has(user, "petty.view")
+                  : canIncome,
+          )
+          .map(([label, n, path]) => (
+            <button key={label} onClick={() => go(String(path))}>
+              <span>{label}</span>
+              <strong>{n}</strong>
+              <ArrowUpRight size={13} />
+            </button>
+          ))}
       </div>
-      <div className="analytics-grid analytics-middle">
-        <ChartCard
-          eyebrow="DEPARTMENT VIEW"
-          title="Where resources are going"
-          subtitle={
-            fullBudget
-              ? "Full allocation, split into spent, committed and available."
-              : "Compare actual spending and unpaid commitments."
-          }
-          action={
-            <div className="chart-toggle">
-              <button
-                aria-pressed={!fullBudget}
-                onClick={() => setFullBudget(false)}
-              >
-                Used funds
-              </button>
-              <button
-                aria-pressed={fullBudget}
-                onClick={() => setFullBudget(true)}
-              >
-                Full budget
-              </button>
-            </div>
-          }
-        >
-          <BarChart
-            points={budgetPoints}
-            primary="Spent"
-            secondary="Committed"
-            tertiary={fullBudget ? "Available" : undefined}
-            onSelect={(p) =>
-              go("budgets?departmentId=" + (p.key === "school" ? "" : p.key))
+      <div
+        className="analytics-grid analytics-middle"
+        style={{
+          gridTemplateColumns: canBudget && canIncome ? undefined : "1fr",
+        }}
+      >
+        {canBudget && (
+          <ChartCard
+            eyebrow="DEPARTMENT VIEW"
+            title="Where resources are going"
+            subtitle={
+              fullBudget
+                ? "Full allocation, split into spent, committed and available."
+                : "Compare actual spending and unpaid commitments."
             }
-          />
-        </ChartCard>
-        <ChartCard
-          eyebrow="SUPPORTING THE MISSION"
-          title="Income & giving"
-          subtitle="Cash donations, grants and other income. Non-cash gifts are tracked in inventory."
-        >
-          <DonutChart
-            points={charts.income.distribution}
-            centerLabel="Cash received"
-            onSelect={() => go("income")}
-          />
-          <button className="chart-text-link" onClick={() => go("income")}>
-            Explore income & donations <ArrowUpRight size={14} />
-          </button>
-        </ChartCard>
+            action={
+              <div className="chart-toggle">
+                <button
+                  aria-pressed={!fullBudget}
+                  onClick={() => setFullBudget(false)}
+                >
+                  Used funds
+                </button>
+                <button
+                  aria-pressed={fullBudget}
+                  onClick={() => setFullBudget(true)}
+                >
+                  Full budget
+                </button>
+              </div>
+            }
+          >
+            <BarChart
+              points={budgetPoints}
+              primary="Spent"
+              secondary="Committed"
+              tertiary={fullBudget ? "Available" : undefined}
+              onSelect={(p) =>
+                go("budgets?departmentId=" + (p.key === "school" ? "" : p.key))
+              }
+            />
+          </ChartCard>
+        )}
+        {canIncome && (
+          <ChartCard
+            eyebrow="SUPPORTING THE MISSION"
+            title="Income & giving"
+            subtitle="Cash donations, grants and other income. Non-cash gifts are tracked in inventory."
+          >
+            <DonutChart
+              points={charts.income.distribution}
+              centerLabel="Cash received"
+              onSelect={() => go("income")}
+            />
+            <button className="chart-text-link" onClick={() => go("income")}>
+              Explore income & donations <ArrowUpRight size={14} />
+            </button>
+          </ChartCard>
+        )}
       </div>
       <div className="analytics-grid analytics-bottom">
         <ChartCard
@@ -322,7 +404,9 @@ export function Dashboard({
                   ?.name || "Department request"}
               </small>
               <footer>
-                <span>{kes(r.estimatedAmount)}</span>
+                <span>
+                  {canBudget ? kes(r.estimatedAmount) : "Receiving order"}
+                </span>
                 <ArrowUpRight size={17} />
               </footer>
             </button>

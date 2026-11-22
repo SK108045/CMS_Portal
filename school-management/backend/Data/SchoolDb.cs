@@ -76,6 +76,7 @@ public class SchoolDb(DbContextOptions<SchoolDb> options) : DbContext(options)
             .WithMany()
             .HasForeignKey(x => x.ApprovedBy)
             .OnDelete(DeleteBehavior.Restrict);
+        m.Entity<User>().ToTable(t => { t.HasCheckConstraint("CK_Users_Role", "\"Role\" IN ('ADMIN','FINANCE','STOREKEEPER','DEPARTMENT_HEAD','STAFF','AUDITOR')"); t.HasCheckConstraint("CK_Users_Department", "\"Role\" NOT IN ('STAFF','DEPARTMENT_HEAD') OR \"DepartmentId\" IS NOT NULL"); });
         m.Entity<User>().HasIndex(x => x.Email).IsUnique();
         m.Entity<Department>().HasIndex(x => x.Name).IsUnique();
         m.Entity<InventoryItem>().HasIndex(x => x.Code).IsUnique();

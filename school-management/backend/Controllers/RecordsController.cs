@@ -84,48 +84,17 @@ public class RecordsController(
         };
     }
 
-    internal async Task<int?> Department(Record r) =>
-        r switch
-        {
-            Department d => d.Id,
-            User u => u.DepartmentId,
-            Budget b => b.DepartmentId,
-            BudgetAdjustment a => (await db.Budgets.FindAsync(a.BudgetId))?.DepartmentId,
-            PurchaseRequest q => q.DepartmentId,
-            ApprovalHistory a => (await db.Requests.FindAsync(a.PurchaseRequestId))?.DepartmentId,
-            Invoice i => (await db.Requests.FindAsync(i.PurchaseRequestId))?.DepartmentId,
-            Payment p => (await db.Requests.FindAsync(p.PurchaseRequestId))?.DepartmentId,
-            Expense e => e.DepartmentId,
-            PettyAccount a => a.DepartmentId,
-            PettyFundingRequest p => (await db.PettyAccounts.FindAsync(p.AccountId))?.DepartmentId,
-            PettyTransaction t => (await db.PettyAccounts.FindAsync(t.AccountId))?.DepartmentId,
-            Income i => i.DepartmentId,
-            InventoryItem i => i.DepartmentId,
-            StockMovement m => m.DepartmentId
-                ?? (await db.Inventory.FindAsync(m.InventoryItemId))?.DepartmentId,
-            Asset a => a.DepartmentId,
-            Document d => d.DepartmentId,
-            AuditLog a => a.DepartmentId,
-            _ => null,
-        };
+    internal Task<int?> Department(Record r) => access.Department(r);
 
     [HttpGet("{resource}")]
     public async Task<object> List(string resource)
     {
-        if (resource == "users")
-            access.RequireAdmin();
+        access.RequireRead(resource);
         var result = new List<object>();
         foreach (var r in await All(resource))
         {
             var dept = await Department(r);
-            var shared =
-                resource is "categories" or "locations"
-                || (resource == "inventory" && dept == null);
-            if (
-                !access.Admin
-                && !shared
-                && !FinancialRules.CanAccess(false, access.DepartmentId, dept)
-            )
+            if (!await access.CanReadRecord(resource, r))
                 continue;
             var node = JsonSerializer.SerializeToNode(r, r.GetType(), Json)!.AsObject();
             foreach (var field in node.ToList())
@@ -205,6 +174,12 @@ public class RecordsController(
                 node["missingFile"] = !System.IO.File.Exists(
                     Path.Combine(StorageRoot(), doc.RelativePath)
                 );
+            if (r is PurchaseRequest request)
+            {
+                node["allowedTransitions"] = JsonSerializer.SerializeToNode(access.RequestActions(request));
+                node["canEdit"] = access.CanEditRequest(request);
+            }
+            access.Redact(resource, node);
             result.Add(node);
         }
         return result;
@@ -225,17 +200,9 @@ public class RecordsController(
 
     async Task<object> Save(string resource, int? id, JsonElement input)
     {
-        if (
-            !Types.TryGetValue(resource, out var type)
-            || resource is "audit" or "documents" or "approvals" or "payments"
-        )
+        access.RequireWrite(resource);
+        if (!Types.TryGetValue(resource, out var type) || resource is "audit" or "documents" or "approvals" or "payments")
             throw new ArgumentException("Use the dedicated workflow for this record.");
-        if (
-            resource != "requests"
-            && resource != "petty-transactions"
-            && resource != "petty-requests"
-        )
-            access.RequireAdmin();
         if (
             id.HasValue
             && resource
@@ -269,12 +236,19 @@ public class RecordsController(
             previous =
                 await db.FindAsync(type, id.Value) as Record
                 ?? throw new ArgumentException("Record not found.");
-            access.Check(await Department(previous));
+            await access.RequireRecord(resource, previous);
+            access.Check(resource, await Department(previous));
+            if (previous is PurchaseRequest previousRequest && !access.CanEditRequest(previousRequest))
+                throw new UnauthorizedAccessException("You cannot edit this request.");
             old = JsonSerializer.Serialize(previous, type, Json);
             r.CreatedAt = previous.CreatedAt;
             r.CreatedBy = previous.CreatedBy;
             db.Entry(previous).State = EntityState.Detached;
         }
+        if (r is PurchaseRequest scoped && !access.All("requests"))
+            scoped.DepartmentId = access.DepartmentId ?? throw new UnauthorizedAccessException("A department is required.");
+        if (resource is not ("requests" or "categories" or "locations" or "suppliers"))
+            access.Check(resource, await Department(r));
         var reason = input.TryGetProperty("overrideReason", out var reasonNode)
             ? reasonNode.GetString() ?? ""
             : "";
@@ -295,9 +269,9 @@ public class RecordsController(
                 if (!System.Net.Mail.MailAddress.TryCreate(u.Email, out _))
                     throw new ArgumentException("Enter a valid email.");
                 u.Email = u.Email.Trim().ToLowerInvariant();
-                if (u.Role is not ("ADMIN" or "USER"))
+                if (!RolePermissions.Valid(u.Role))
                     throw new ArgumentException("Invalid role.");
-                if (u.Role == "USER" && !u.DepartmentId.HasValue)
+                if (RolePermissions.NeedsDepartment(u.Role) && !u.DepartmentId.HasValue)
                     throw new ArgumentException("A department is required.");
                 if (
                     u.DepartmentId.HasValue
@@ -310,6 +284,12 @@ public class RecordsController(
                         throw new ArgumentException("You cannot remove your own Admin access.");
                     u.PasswordHash = pu.PasswordHash;
                     u.SessionVersion = pu.SessionVersion + 1;
+                    if (pu.Role != u.Role)
+                        access.Audit("Role changed", "users", u.Id, u.DepartmentId, "User role changed", pu.Role, u.Role);
+                    if (pu.DepartmentId != u.DepartmentId)
+                        access.Audit("Department changed", "users", u.Id, u.DepartmentId, "User department changed", pu.DepartmentId?.ToString() ?? "", u.DepartmentId?.ToString() ?? "");
+                    if (pu.Active != u.Active)
+                        access.Audit(u.Active ? "User activated" : "User deactivated", "users", u.Id, u.DepartmentId, u.Email);
                 }
                 if (
                     input.TryGetProperty("password", out var pw)
@@ -318,6 +298,8 @@ public class RecordsController(
                 {
                     AuthController.ValidatePassword(pw.GetString()!);
                     u.PasswordHash = hasher.HashPassword(u, pw.GetString()!);
+                    if (id.HasValue)
+                        access.Audit("Password reset", "users", id.Value, u.DepartmentId, u.Email);
                     u.FailedLogins = 0;
                     u.LockedUntil = null;
                 }
@@ -334,6 +316,12 @@ public class RecordsController(
                 Ledger.Required(a.Reason, "Adjustment reason");
                 if ((await db.Budgets.FindAsync(a.BudgetId)) == null)
                     throw new ArgumentException("Budget not found.");
+                if (await ledger.Available(a.BudgetId) + a.Amount < 0)
+                {
+                    access.RequirePermission("budgets.override");
+                    Ledger.Required(reason, "Budget override reason");
+                    access.Audit("Budget override", "budgets", a.BudgetId, await Department(a), reason);
+                }
                 if (
                     await ledger.Available(a.BudgetId) + a.Amount < 0
                     && string.IsNullOrWhiteSpace(reason)
@@ -343,9 +331,7 @@ public class RecordsController(
                     );
                 break;
             case PurchaseRequest q:
-                if (!access.Admin)
-                    q.DepartmentId = access.DepartmentId!.Value;
-                access.Check(q.DepartmentId);
+                access.Check("requests", q.DepartmentId);
                 Ledger.Required(q.Purpose, "Purpose");
                 if (previous is PurchaseRequest pq)
                 {
@@ -387,7 +373,7 @@ public class RecordsController(
                     budget == null
                     || (
                         budget.DepartmentId != q.DepartmentId
-                        && !(access.Admin && budget.DepartmentId == null)
+                        && !(access.All("budgets") && budget.DepartmentId == null)
                     )
                 )
                     throw new ArgumentException("Choose a department budget.");
@@ -396,6 +382,7 @@ public class RecordsController(
                 var req =
                     await db.Requests.FindAsync(i.PurchaseRequestId)
                     ?? throw new ArgumentException("Request not found.");
+                await access.RequireRecord("requests", req);
                 if (req.Status is not ("Received" or "Partially Received" or "Paid"))
                     throw new ArgumentException("Receive the order before recording its invoice.");
                 if (req.SupplierId != i.SupplierId)
@@ -434,7 +421,7 @@ public class RecordsController(
                 var fundingAccount =
                     await db.PettyAccounts.FindAsync(funding.AccountId)
                     ?? throw new ArgumentException("Account not found.");
-                access.Check(fundingAccount.DepartmentId);
+                access.Check("petty-requests", fundingAccount.DepartmentId);
                 Ledger.Positive(funding.Amount);
                 Ledger.Required(funding.Purpose, "Purpose");
                 funding.Status = "Pending";
@@ -448,7 +435,7 @@ public class RecordsController(
                 var account =
                     await db.PettyAccounts.FindAsync(t.AccountId)
                     ?? throw new ArgumentException("Account not found.");
-                access.Check(account.DepartmentId);
+                access.Check("petty-transactions", account.DepartmentId);
                 Ledger.Positive(t.Amount);
                 Ledger.Required(t.Purpose, "Purpose");
                 Ledger.Required(t.Person, "Person receiving money");
@@ -458,7 +445,7 @@ public class RecordsController(
                 )
                     throw new ArgumentException("Invalid petty cash movement.");
                 if (t.Kind is "Opening" or "Replenishment")
-                    access.RequireAdmin();
+                    access.RequirePermission("petty.manage");
                 if (
                     t.Kind == "Opening"
                     && await db.PettyTransactions.AnyAsync(x => x.AccountId == t.AccountId)
@@ -504,7 +491,7 @@ public class RecordsController(
                         reason
                     );
                 }
-                t.ApprovedBy = access.Admin ? access.UserId : null;
+                t.ApprovedBy = access.UserId;
                 break;
             case Income i:
                 Ledger.Required(i.Source, "Income source");
@@ -543,7 +530,7 @@ public class RecordsController(
                 Ledger.Required(i.Code, "Internal code");
                 break;
             case StockMovement m:
-                access.RequireAdmin();
+                access.RequirePermission("inventory.manage");
                 Ledger.Positive(m.Quantity);
                 if (
                     !new[]
@@ -568,9 +555,12 @@ public class RecordsController(
                     < 0
                 )
                     throw new ArgumentException("Insufficient stock.");
+                access.Check("inventory", inv.DepartmentId);
                 if (m.PurchaseRequestId.HasValue)
                 {
                     var purchase = await db.Requests.FindAsync(m.PurchaseRequestId);
+                    if (purchase != null)
+                        await access.RequireRecord("requests", purchase);
                     if (
                         purchase == null
                         || purchase.Status
@@ -633,6 +623,9 @@ public class RecordsController(
         );
         await db.SaveChangesAsync();
         await tx.CommitAsync();
-        return new { id = r.Id };
+        return new
+        {
+            id = r.Id
+        };
     }
 }

@@ -22,6 +22,8 @@ public class InsightsController(
 {
     async Task<JsonArray> Rows(string resource)
     {
+        if (!access.CanRead(resource))
+            return new JsonArray();
         var c = new RecordsController(db, access, ledger, hasher)
         {
             ControllerContext = ControllerContext,
@@ -49,10 +51,20 @@ public class InsightsController(
             Income = await analytics.Build("income", income.Select(x => x!.AsObject())),
             Requests = await analytics.Build("requests", requests.Select(x => x!.AsObject()))
         };
+        var inventory = await Rows("inventory");
+        var assets = await Rows("assets");
         decimal Sum(JsonArray a, string k) => a.Sum(x => x?[k]?.GetValue<decimal>() ?? 0);
         return new
         {
             Charts = charts,
+            OperationalCharts = access.CanRead("inventory") ? await analytics.Build("inventory", inventory.Select(x => x!.AsObject())) : null,
+            Operations = new
+            {
+                InventoryItems = inventory.Count,
+                Assets = assets.Count,
+                ReceivingRequests = requests.Count(x => Access.ReceivingStatuses.Contains(x?["status"]?.ToString() ?? "")),
+                LowStock = inventory.Count(x => (x?["quantity"]?.GetValue<decimal>() ?? 0) <= (x?["reorderLevel"]?.GetValue<decimal>() ?? 0))
+            },
             Budget = Sum(budgets, "amount"),
             Committed = Sum(budgets, "committed"),
             Spent = Sum(budgets, "spent"),
@@ -92,6 +104,7 @@ public class InsightsController(
     {
         if (!new[] { "budgets", "requests", "expenses", "payments", "income", "inventory", "assets", "petty-accounts", "petty-transactions", "petty-requests" }.Contains(resource))
             throw new ArgumentException("No visual summary is available for this module.");
+        access.RequireRead(resource);
         return await analytics.Build(resource, (await Rows(resource)).Select(x => x!.AsObject()));
     }
 
@@ -137,6 +150,7 @@ public class InsightsController(
         bool csv = false
     )
     {
+        access.RequireReport(name, departmentId);
         if (!Reports.TryGetValue(name, out var resource))
             throw new ArgumentException("Unknown report.");
         var rows = (await Rows(resource)).Select(x => x!.AsObject()).ToList();

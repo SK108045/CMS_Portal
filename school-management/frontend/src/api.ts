@@ -21,8 +21,11 @@ export async function api(
     body: form ? body : body ? JSON.stringify(body) : undefined,
   });
   if (!r.ok) {
-    if (r.status === 401 && path !== "auth/login")
-      window.dispatchEvent(new Event("session-expired"));
+    if (r.status === 401) {
+      token = "";
+      if (path !== "auth/login")
+        window.dispatchEvent(new Event("session-expired"));
+    }
     let msg = "Unable to complete the operation.";
     try {
       const e = await r.json();

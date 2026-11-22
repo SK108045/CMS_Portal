@@ -25,7 +25,7 @@ public class User : Record
     public string Position { get; set; } = "";
     public int? DepartmentId { get; set; }
     public Department? Department { get; set; }
-    public string Role { get; set; } = "USER";
+    public string Role { get; set; } = "STAFF";
     public string PasswordHash { get; set; } = "";
     public bool Active { get; set; } = true;
     public int FailedLogins { get; set; }

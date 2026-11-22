@@ -10,38 +10,14 @@ namespace School.Api.Controllers;
 [Authorize, ApiController, Route("api/documents")]
 public class DocumentsController(SchoolDb db, Access access, IConfiguration config, IWebHostEnvironment environment) : ControllerBase
 {
-    string Root => Path.GetFullPath(config["StoragePath"] ?? "../storage",environment.ContentRootPath);
+    string Root => Path.GetFullPath(config["StoragePath"] ?? "../storage", environment.ContentRootPath);
 
-    async Task<int?> Scope(string entity, int id)
+    async Task<int?> Scope(string entity, int id, string kind)
     {
-        var dept = entity switch
-        {
-            "requests" => (await db.Requests.FindAsync(id))?.DepartmentId,
-            "payments" => await db
-                .Payments.Where(p => p.Id == id)
-                .Select(p => (int?)p.PurchaseRequest!.DepartmentId)
-                .SingleOrDefaultAsync(),
-            "invoices" => await db
-                .Invoices.Where(p => p.Id == id)
-                .Select(p => (int?)p.PurchaseRequest!.DepartmentId)
-                .SingleOrDefaultAsync(),
-            "expenses" => (await db.Expenses.FindAsync(id))?.DepartmentId,
-            "petty-transactions" => await db
-                .PettyTransactions.Where(p => p.Id == id)
-                .Select(p => (int?)p.Account!.DepartmentId)
-                .SingleOrDefaultAsync(),
-            "income" => (await db.Income.FindAsync(id))?.DepartmentId,
-            "assets" => (await db.Assets.FindAsync(id))?.DepartmentId,
-            "inventory" => (await db.Inventory.FindAsync(id))?.DepartmentId,
-            _ => throw new ArgumentException("Unsupported document relationship."),
-        };
-        if (
-            !RecordsController.Types.TryGetValue(entity, out var type)
-            || await db.FindAsync(type, id) == null
-        )
-            throw new ArgumentException("Linked record not found.");
-        access.Check(dept);
-        return dept;
+        if (!await access.CanDocument(entity, id, kind))
+            throw new UnauthorizedAccessException("You cannot access evidence for this record.");
+        var linked = await access.Find(entity, id) ?? throw new ArgumentException("Linked record not found.");
+        return await access.Department(linked);
     }
 
     [HttpPost, RequestSizeLimit(11000000)]
@@ -52,7 +28,8 @@ public class DocumentsController(SchoolDb db, Access access, IConfiguration conf
         IFormFile file
     )
     {
-        var dept = await Scope(entity, entityId);
+        access.RequirePermission("documents.upload");
+        var dept = await Scope(entity, entityId, kind);
         if (file.Length == 0 || file.Length > 10000000)
             throw new ArgumentException("Files must be between 1 byte and 10 MB.");
         var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
@@ -110,7 +87,10 @@ public class DocumentsController(SchoolDb db, Access access, IConfiguration conf
             await db.SaveChangesAsync();
             access.Audit("Document attached", entity, entityId, dept, d.Name);
             await db.SaveChangesAsync();
-            return new { d.Id };
+            return new
+            {
+                d.Id
+            };
         }
         catch
         {
@@ -125,11 +105,14 @@ public class DocumentsController(SchoolDb db, Access access, IConfiguration conf
         var d = await db.Documents.FindAsync(id);
         if (d == null)
             return NotFound();
-        access.Check(d.DepartmentId);
+        await Scope(d.Entity, d.EntityId, d.Kind);
         var path = Path.Combine(Root, d.RelativePath);
         if (!System.IO.File.Exists(path))
             return NotFound(
-                new { error = "The evidence file is missing from storage. Restore it from backup." }
+                new
+                {
+                    error = "The evidence file is missing from storage. Restore it from backup."
+                }
             );
         Response.Headers["X-Content-Type-Options"] = "nosniff";
         return PhysicalFile(path, d.ContentType, d.Name);

@@ -1331,3 +1331,44 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261122155036_ExpandRolePermissions') THEN
+    INSERT INTO "Departments" ("Name","Head","Active","CreatedAt","CreatedBy")
+    SELECT 'Unassigned (migration)','Admin review required',false,CURRENT_TIMESTAMP,NULL
+    WHERE EXISTS (SELECT 1 FROM "Users" WHERE "Role"='USER' AND "DepartmentId" IS NULL)
+    ON CONFLICT ("Name") DO NOTHING;
+    UPDATE "Users" SET "DepartmentId"=(SELECT "Id" FROM "Departments" WHERE "Name"='Unassigned (migration)'),"Active"=false
+    WHERE "Role"='USER' AND "DepartmentId" IS NULL;
+    INSERT INTO "Audit" ("Actor","Action","Entity","EntityId","DepartmentId","Description","OldValues","NewValues","CreatedAt","CreatedBy")
+    SELECT 'Migration','Role migrated','users',"Id","DepartmentId",'Legacy USER safely mapped to STAFF','USER','STAFF',CURRENT_TIMESTAMP,NULL FROM "Users" WHERE "Role"='USER';
+    UPDATE "Users" SET "Role"='STAFF',"SessionVersion"="SessionVersion"+1 WHERE "Role"='USER';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261122155036_ExpandRolePermissions') THEN
+    ALTER TABLE "Users" ADD CONSTRAINT "CK_Users_Department" CHECK ("Role" NOT IN ('STAFF','DEPARTMENT_HEAD') OR "DepartmentId" IS NOT NULL);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261122155036_ExpandRolePermissions') THEN
+    ALTER TABLE "Users" ADD CONSTRAINT "CK_Users_Role" CHECK ("Role" IN ('ADMIN','FINANCE','STOREKEEPER','DEPARTMENT_HEAD','STAFF','AUDITOR'));
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261122155036_ExpandRolePermissions') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261122155036_ExpandRolePermissions', '8.0.22');
+    END IF;
+END $EF$;
+COMMIT;
+

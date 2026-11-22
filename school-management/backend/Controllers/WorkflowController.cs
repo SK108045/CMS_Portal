@@ -20,11 +20,11 @@ public class WorkflowController(SchoolDb db, Access access, Ledger ledger) : Con
         );
         var r =
             await db.Requests.FindAsync(id) ?? throw new ArgumentException("Request not found.");
-        access.Check(r.DepartmentId);
+        await access.RequireRecord("requests", r);
         var old = r.Status;
         var next = input.Status;
-        if (next is not ("Submitted" or "Cancelled"))
-            access.RequireAdmin();
+        if (!access.RequestActions(r).Contains(next))
+            throw new UnauthorizedAccessException("You cannot perform this request transition.");
         var allowed = old switch
         {
             "Draft" or "Returned for Changes" => new[] { "Submitted", "Cancelled" },
@@ -45,18 +45,14 @@ public class WorkflowController(SchoolDb db, Access access, Ledger ledger) : Con
         };
         if (!allowed.Contains(next))
             throw new ArgumentException("Invalid status transition from " + old + " to " + next);
-        if (
-            !access.Admin
-            && next == "Cancelled"
-            && old is not ("Draft" or "Returned for Changes" or "Submitted")
-        )
-            throw new UnauthorizedAccessException();
         if (next is "Rejected" or "Returned for Changes" or "Cancelled")
             Ledger.Required(input.Comment, "Decision reason");
         if (next == "Cancelled" && await db.Payments.AnyAsync(p => p.PurchaseRequestId == id))
             throw new ArgumentException("Paid requests cannot be cancelled.");
         if (next == "Approved")
         {
+            access.RequirePermission("requests.approve");
+            access.ApproveOwn(r.RequestedBy, "requests", r.Id, r.DepartmentId, input.Comment);
             var amount = input.Amount ?? r.EstimatedAmount;
             Ledger.Positive(amount);
             await ledger.CheckBudget(r.BudgetId, r.DepartmentId, amount, input.Comment);
@@ -82,7 +78,11 @@ public class WorkflowController(SchoolDb db, Access access, Ledger ledger) : Con
         access.Audit("Status changed", "requests", id, r.DepartmentId, input.Comment, old, next);
         await db.SaveChangesAsync();
         await tx.CommitAsync();
-        return new { r.Id, r.Status };
+        return new
+        {
+            r.Id,
+            r.Status
+        };
     }
 
     public record PaymentInput(
@@ -100,13 +100,14 @@ public class WorkflowController(SchoolDb db, Access access, Ledger ledger) : Con
     [HttpPost("payments")]
     public async Task<object> Pay(PaymentInput i)
     {
-        access.RequireAdmin();
+        access.RequirePermission("payments.create");
         await using var tx = await db.Database.BeginTransactionAsync(
             System.Data.IsolationLevel.Serializable
         );
         var r =
             await db.Requests.FindAsync(i.PurchaseRequestId)
             ?? throw new ArgumentException("Request not found.");
+        access.Check("payments", r.DepartmentId);
         if (r.Status is not ("Received" or "Partially Received"))
             throw new ArgumentException("Receive goods before payment.");
         var invoice =
@@ -140,8 +141,13 @@ public class WorkflowController(SchoolDb db, Access access, Ledger ledger) : Con
         var uncommitted =
             Math.Max(0, paid + i.Amount - r.ApprovedAmount) - Math.Max(0, paid - r.ApprovedAmount);
         await ledger.CheckBudget(r.BudgetId, r.DepartmentId, uncommitted, i.OverrideReason);
-        if (paid + i.Amount > r.ApprovedAmount && string.IsNullOrWhiteSpace(i.OverrideReason))
-            throw new ArgumentException("Payment exceeds approval. Provide an override reason.");
+        if (paid + i.Amount > r.ApprovedAmount)
+        {
+            access.RequirePermission("budgets.override");
+            Ledger.Required(i.OverrideReason, "Payment approval override reason");
+            access.Audit("Payment approval override", "requests", r.Id, r.DepartmentId, i.OverrideReason);
+        }
+        var approvedBy = await db.Approvals.Where(h => h.PurchaseRequestId == r.Id && h.Decision == "Approved").OrderByDescending(h => h.Id).Select(h => h.CreatedBy).FirstOrDefaultAsync() ?? throw new ArgumentException("The request must have an identifiable approval before payment.");
         if (i.FinalPayment)
         {
             if (r.Status != "Received")
@@ -164,7 +170,7 @@ public class WorkflowController(SchoolDb db, Access access, Ledger ledger) : Con
             Reference = i.Reference.Trim().ToUpperInvariant(),
             Payee = i.Payee,
             Date = i.Date,
-            ApprovedBy = access.UserId,
+            ApprovedBy = approvedBy,
             CreatedBy = access.UserId,
         };
         db.Payments.Add(p);
@@ -185,7 +191,10 @@ public class WorkflowController(SchoolDb db, Access access, Ledger ledger) : Con
         );
         await db.SaveChangesAsync();
         await tx.CommitAsync();
-        return new { p.Id };
+        return new
+        {
+            p.Id
+        };
     }
 
     public record ConvertInput(
@@ -200,13 +209,21 @@ public class WorkflowController(SchoolDb db, Access access, Ledger ledger) : Con
     [HttpPost("inventory/{id:int}/asset")]
     public async Task<object> ConvertAsset(int id, ConvertInput input)
     {
-        access.RequireAdmin();
+        access.RequirePermission("assets.convert");
+        access.RequirePermission("inventory.manage");
         await using var tx = await db.Database.BeginTransactionAsync(
             System.Data.IsolationLevel.Serializable
         );
         var item =
             await db.Inventory.FindAsync(id)
             ?? throw new ArgumentException("Inventory item not found.");
+        await access.RequireRecord("inventory", item);
+        access.Check("assets", input.DepartmentId);
+        if (!access.Has("assets.manage"))
+            input = input with
+            {
+                AcquisitionCost = await db.Movements.Where(m => m.InventoryItemId == item.Id && (m.Kind == "Received" || m.Kind == "Donated")).OrderByDescending(m => m.Id).Select(m => m.UnitCost).FirstOrDefaultAsync()
+            };
         if (item.Category != "Permanent Items")
             throw new ArgumentException("Only permanent items can become assets.");
         if (await ledger.Quantity(id) < 1)
@@ -256,7 +273,10 @@ public class WorkflowController(SchoolDb db, Access access, Ledger ledger) : Con
         );
         await db.SaveChangesAsync();
         await tx.CommitAsync();
-        return new { a.Id };
+        return new
+        {
+            a.Id
+        };
     }
 
     public record FundingDecision(bool Approve, string Comment);
@@ -264,13 +284,15 @@ public class WorkflowController(SchoolDb db, Access access, Ledger ledger) : Con
     [HttpPost("petty-requests/{id:int}/decision")]
     public async Task<object> Fund(int id, FundingDecision input)
     {
-        access.RequireAdmin();
+        access.RequirePermission("petty.manage");
         await using var tx = await db.Database.BeginTransactionAsync(
             System.Data.IsolationLevel.Serializable
         );
         var request =
             await db.PettyRequests.Include(r => r.Account).SingleOrDefaultAsync(r => r.Id == id)
             ?? throw new ArgumentException("Funding request not found.");
+        access.Check("petty-requests", request.Account!.DepartmentId);
+        access.ApproveOwn(request.CreatedBy ?? 0, "petty-requests", id, request.Account.DepartmentId, input.Comment);
         if (request.Status != "Pending")
             throw new ArgumentException("This funding request has already been decided.");
         Ledger.Required(input.Comment, "Decision comments / cash issue reference");
@@ -300,6 +322,10 @@ public class WorkflowController(SchoolDb db, Access access, Ledger ledger) : Con
         );
         await db.SaveChangesAsync();
         await tx.CommitAsync();
-        return new { request.Id, request.Status };
+        return new
+        {
+            request.Id,
+            request.Status
+        };
     }
 }

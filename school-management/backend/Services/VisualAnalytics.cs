@@ -59,6 +59,13 @@ public class VisualAnalytics(SchoolDb db)
                 unit = "money";
                 primary = "Requested";
                 comparison = Group(Department, r => Number(r, resource == "requests" ? "estimatedAmount" : "amount"), DepartmentName);
+                if (resource == "requests" && rows.All(r => r["estimatedAmount"] == null))
+                {
+                    comparisonTitle = "Orders available for receiving";
+                    unit = "count";
+                    primary = "Orders";
+                    comparison = Group(Department, r => 1, DepartmentName);
+                }
                 distribution = Group(r => Text(r, "status"), r => 1);
                 trendRows = [];
                 break;

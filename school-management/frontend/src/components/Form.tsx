@@ -1,3 +1,4 @@
+import { has, all } from "../permissions";
 import { useState } from "react";
 import { Row, kes } from "../api";
 import { schemas, Field } from "../schema";
@@ -5,7 +6,7 @@ export function Form({
   resource,
   initial,
   lookups,
-  admin,
+  user,
   departmentId,
   onSave,
   onCancel,
@@ -13,7 +14,7 @@ export function Form({
   resource: string;
   initial: Row;
   lookups: Record<string, Row[]>;
-  admin: boolean;
+  user: Row;
   departmentId?: number;
   onSave: (v: Row) => Promise<void>;
   onCancel: () => void;
@@ -24,17 +25,19 @@ export function Form({
       schema.fields.map((f) => [
         f.key,
         initial[f.key] ??
-          (f.key === "departmentId" && !admin
-            ? departmentId
-            : f.type === "checkbox"
-              ? f.key === "active"
-              : f.type === "date"
-                ? new Date().toISOString().slice(0, 10)
-                : f.type === "select" && f.options
-                  ? f.options[0]
-                  : f.key === "year"
-                    ? "2026"
-                    : ""),
+          (f.key === "role"
+            ? "STAFF"
+            : f.key === "departmentId" && !all(user, resource)
+              ? departmentId
+              : f.type === "checkbox"
+                ? f.key === "active"
+                : f.type === "date"
+                  ? new Date().toISOString().slice(0, 10)
+                  : f.type === "select" && f.options
+                    ? f.options[0]
+                    : f.key === "year"
+                      ? "2026"
+                      : ""),
       ]),
     ),
   );
@@ -82,7 +85,13 @@ export function Form({
     <form onSubmit={submit}>
       <div className="form-grid">
         {schema.fields
-          .filter((f) => admin || f.key !== "overrideReason")
+          .filter(
+            (f) =>
+              (has(user, "budgets.override") || f.key !== "overrideReason") &&
+              (f.key !== "acquisitionCost" ||
+                has(user, "assets.manage") ||
+                resource !== "assets"),
+          )
           .map((f) => (
             <label key={f.key} className={f.type === "textarea" ? "wide" : ""}>
               {f.label}
@@ -91,20 +100,27 @@ export function Form({
               )}
               {f.type === "select" ? (
                 <select
-                  required={!f.optional}
-                  disabled={!admin && f.key === "departmentId"}
+                  required={
+                    !f.optional &&
+                    !(
+                      resource === "users" &&
+                      f.key === "departmentId" &&
+                      !["STAFF", "DEPARTMENT_HEAD"].includes(data.role)
+                    )
+                  }
+                  disabled={!all(user, resource) && f.key === "departmentId"}
                   value={data[f.key] ?? ""}
                   onChange={(e) => change(f, e.target.value)}
                 >
                   <option value="">Select…</option>
-                  {f.options
+                  {(f.key === "role" ? user.assignableRoles : f.options)
                     ?.filter(
-                      (o) =>
-                        admin ||
+                      (o: string) =>
+                        has(user, "petty.manage") ||
                         resource !== "petty-transactions" ||
                         !["Opening", "Replenishment"].includes(o),
                     )
-                    .map((o) => (
+                    .map((o: string) => (
                       <option key={o}>{o}</option>
                     ))}
                   {f.source &&
@@ -134,7 +150,14 @@ export function Form({
               ) : f.type === "textarea" ? (
                 <textarea
                   maxLength={4000}
-                  required={!f.optional}
+                  required={
+                    !f.optional &&
+                    !(
+                      resource === "users" &&
+                      f.key === "departmentId" &&
+                      !["STAFF", "DEPARTMENT_HEAD"].includes(data.role)
+                    )
+                  }
                   value={data[f.key] || ""}
                   onChange={(e) => change(f, e.target.value)}
                 />

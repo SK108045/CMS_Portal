@@ -1214,7 +1214,12 @@ namespace School.Api.Data.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", t =>
+                        {
+                            t.HasCheckConstraint("CK_Users_Department", "\"Role\" NOT IN ('STAFF','DEPARTMENT_HEAD') OR \"DepartmentId\" IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_Users_Role", "\"Role\" IN ('ADMIN','FINANCE','STOREKEEPER','DEPARTMENT_HEAD','STAFF','AUDITOR')");
+                        });
                 });
 
             modelBuilder.Entity("School.Api.Models.ApprovalHistory", b =>

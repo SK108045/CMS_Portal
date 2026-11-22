@@ -1,3 +1,4 @@
+import { has, read, create, edit } from "../permissions";
 import { ModuleInsights } from "../components/charts/ModuleInsights";
 import { useEffect, useState } from "react";
 import { api, Row, kes } from "../api";
@@ -35,8 +36,10 @@ export function Records({
   const [docs, setDocs] = useState<Row[]>([]);
   const [history, setHistory] = useState<Row[]>([]);
   const [file, setFile] = useState<File>();
-  const [kind, setKind] = useState("Receipt");
-  const admin = user.role === "ADMIN";
+  const [kind, setKind] = useState(
+    has(user, "documents.financial") ? "Receipt" : "Delivery Note",
+  );
+
   const schema = schemas[resource];
   async function load() {
     setBusy(true);
@@ -67,38 +70,50 @@ export function Records({
                 ? ["movements"]
                 : [];
       Promise.all(
-        sources.map(
-          async (s) =>
-            [
-              s,
-              (await api("records/" + s)).filter((r: Row) =>
-                resource === "requests"
-                  ? r.purchaseRequestId === detail.id
-                  : resource === "suppliers"
-                    ? r.supplierId === detail.id ||
-                      (r.purchaseRequestId &&
-                        lookups.requests?.find(
-                          (q) => q.id === r.purchaseRequestId,
-                        )?.supplierId === detail.id)
-                    : resource === "assets"
-                      ? r.assetId === detail.id
-                      : r.inventoryItemId === detail.id,
-              ),
-            ] as const,
-        ),
+        sources
+          .filter((s) => read(user, s))
+          .map(
+            async (s) =>
+              [
+                s,
+                (await api("records/" + s)).filter((r: Row) =>
+                  resource === "requests"
+                    ? r.purchaseRequestId === detail.id
+                    : resource === "suppliers"
+                      ? r.supplierId === detail.id ||
+                        (r.purchaseRequestId &&
+                          lookups.requests?.find(
+                            (q) => q.id === r.purchaseRequestId,
+                          )?.supplierId === detail.id)
+                      : resource === "assets"
+                        ? r.assetId === detail.id
+                        : r.inventoryItemId === detail.id,
+                ),
+              ] as const,
+          ),
       )
         .then((entries) => setRelated(Object.fromEntries(entries)))
         .catch((e) => setError(e.message));
-      api("records/documents").then((r: Row[]) =>
-        setDocs(
-          r.filter((d) => d.entity === resource && d.entityId === detail.id),
-        ),
-      );
-      api("records/audit").then((r: Row[]) =>
-        setHistory(
-          r.filter((d) => d.entity === resource && d.entityId === detail.id),
-        ),
-      );
+      if (read(user, "documents"))
+        api("records/documents")
+          .then((r: Row[]) =>
+            setDocs(
+              r.filter(
+                (d) => d.entity === resource && d.entityId === detail.id,
+              ),
+            ),
+          )
+          .catch((e) => setError(e.message));
+      if (read(user, "audit"))
+        api("records/audit")
+          .then((r: Row[]) =>
+            setHistory(
+              r.filter(
+                (d) => d.entity === resource && d.entityId === detail.id,
+              ),
+            ),
+          )
+          .catch((e) => setError(e.message));
       setAmount(String(detail.estimatedAmount || ""));
       setSupplier(String(detail.supplierId || ""));
       setComment("");
@@ -119,32 +134,18 @@ export function Records({
       setWorking(false);
     }
   }
-  const canCreate = !schema.readOnly && (admin || schema.userCreate);
-  const transitions = detail
-    ? (
-        {
-          Draft: ["Submitted", "Cancelled"],
-          "Returned for Changes": ["Submitted", "Cancelled"],
-          Submitted: [
-            "Under Review",
-            "Approved",
-            "Rejected",
-            "Returned for Changes",
-            "Cancelled",
-          ],
-          "Under Review": [
-            "Approved",
-            "Rejected",
-            "Returned for Changes",
-            "Cancelled",
-          ],
-          Approved: ["Ordered", "Partially Received", "Received", "Cancelled"],
-          Ordered: ["Partially Received", "Received", "Cancelled"],
-          "Partially Received": ["Received"],
-          Paid: ["Completed"],
-        } as Record<string, string[]>
-      )[detail.status] || []
-    : [];
+  const canCreate = !schema.readOnly && create(user, resource);
+  const transitions: string[] = detail?.allowedTransitions || [];
+  const receivingOnly =
+    has(user, "requests.view.receiving") && !has(user, "requests.view.all");
+  const columns = schema.columns.filter(
+    (k) =>
+      !(
+        receivingOnly &&
+        resource === "requests" &&
+        ["estimatedAmount", "approvedAmount", "paid", "budgetId"].includes(k)
+      ),
+  );
   return (
     <>
       <div className="page-heading">
@@ -154,27 +155,30 @@ export function Records({
           <p>{schema.description}</p>
         </div>
         <div className="actions">
-          {resource === "budgets" && admin && (
+          {resource === "budgets" && read(user, "adjustments") && (
             <button onClick={() => (location.hash = "adjustments")}>
               Adjustment history
             </button>
           )}
-          {resource === "petty-accounts" && (
+          {resource === "petty-accounts" && read(user, "petty-requests") && (
             <button onClick={() => (location.hash = "petty-requests")}>
-              Request funds / decisions
+              {create(user, "petty-requests")
+                ? "Request funds / decisions"
+                : "Funding requests"}
             </button>
           )}
-          {resource === "petty-accounts" && (
-            <button onClick={() => (location.hash = "petty-transactions")}>
-              View movements
-            </button>
-          )}
-          {resource === "inventory" && (
+          {resource === "petty-accounts" &&
+            read(user, "petty-transactions") && (
+              <button onClick={() => (location.hash = "petty-transactions")}>
+                View movements
+              </button>
+            )}
+          {resource === "inventory" && read(user, "movements") && (
             <button onClick={() => (location.hash = "movements")}>
               Stock movements
             </button>
           )}
-          {resource === "payments" && admin && (
+          {resource === "payments" && read(user, "invoices") && (
             <button onClick={() => (location.hash = "invoices")}>
               Invoices
             </button>
@@ -206,7 +210,7 @@ export function Records({
                 )
               : rows
           }
-          columns={schema.columns}
+          columns={columns}
           lookups={lookups}
           onOpen={(r) => setDetail(r)}
         />
@@ -221,7 +225,7 @@ export function Records({
             resource={resource}
             initial={editing}
             lookups={lookups}
-            admin={admin}
+            user={user}
             departmentId={user.departmentId}
             onCancel={() => setEditing(null)}
             onSave={async (v) => {
@@ -271,13 +275,19 @@ export function Records({
           {detail.items && (
             <Table
               rows={detail.items}
-              columns={["description", "quantity", "unitPrice"]}
+              columns={
+                receivingOnly
+                  ? ["description", "quantity"]
+                  : ["description", "quantity", "unitPrice"]
+              }
               lookups={lookups}
             />
           )}
           <div className="actions detail-actions">
             {schema.editable &&
-              (admin || resource === "requests") &&
+              (resource === "requests"
+                ? detail.canEdit
+                : edit(user, resource)) &&
               (resource !== "requests" ||
                 ["Draft", "Returned for Changes"].includes(detail.status)) && (
                 <button
@@ -291,38 +301,48 @@ export function Records({
               )}
             {resource === "suppliers" && (
               <>
-                <button onClick={() => (location.hash = "payments")}>
-                  Payment history
-                </button>
-                <button onClick={() => (location.hash = "invoices")}>
-                  Invoices
-                </button>
+                {read(user, "payments") && (
+                  <button onClick={() => (location.hash = "payments")}>
+                    Payment history
+                  </button>
+                )}
+                {read(user, "invoices") && (
+                  <button onClick={() => (location.hash = "invoices")}>
+                    Invoices
+                  </button>
+                )}
               </>
             )}
             {resource === "departments" && (
               <>
-                <button
-                  onClick={() =>
-                    (location.hash = "budgets?departmentId=" + detail.id)
-                  }
-                >
-                  Budgets
-                </button>
-                <button
-                  onClick={() =>
-                    (location.hash = "requests?departmentId=" + detail.id)
-                  }
-                >
-                  Requests
-                </button>
-                <button
-                  onClick={() =>
-                    (location.hash = "expenses?departmentId=" + detail.id)
-                  }
-                >
-                  Expenses
-                </button>
-                {admin && (
+                {read(user, "budgets") && (
+                  <button
+                    onClick={() =>
+                      (location.hash = "budgets?departmentId=" + detail.id)
+                    }
+                  >
+                    Budgets
+                  </button>
+                )}
+                {read(user, "requests") && (
+                  <button
+                    onClick={() =>
+                      (location.hash = "requests?departmentId=" + detail.id)
+                    }
+                  >
+                    Requests
+                  </button>
+                )}
+                {read(user, "expenses") && (
+                  <button
+                    onClick={() =>
+                      (location.hash = "expenses?departmentId=" + detail.id)
+                    }
+                  >
+                    Expenses
+                  </button>
+                )}
+                {read(user, "users") && (
                   <button
                     onClick={() =>
                       (location.hash = "users?departmentId=" + detail.id)
@@ -334,7 +354,7 @@ export function Records({
               </>
             )}
             {resource === "inventory" &&
-              admin &&
+              has(user, "assets.convert") &&
               detail.category === "Permanent Items" && (
                 <button
                   disabled={detail.quantity < 1}
@@ -353,7 +373,7 @@ export function Records({
             )}
           </div>
           {resource === "petty-requests" &&
-            admin &&
+            has(user, "petty.manage") &&
             detail.status === "Pending" && (
               <section className="workflow">
                 <h3>Funding decision</h3>
@@ -397,7 +417,7 @@ export function Records({
                 </div>
               </section>
             )}
-          {resource === "requests" && (
+          {resource === "requests" && transitions.length > 0 && (
             <section className="workflow">
               <h3>Move this request forward</h3>
               <p>
@@ -413,9 +433,7 @@ export function Records({
                   >
                     <option value="">Select action…</option>
                     {transitions
-                      .filter(
-                        (s) => admin || ["Submitted", "Cancelled"].includes(s),
-                      )
+                      .filter((s) => transitions.includes(s))
                       .map((s) => (
                         <option key={s}>{s}</option>
                       ))}
@@ -472,15 +490,19 @@ export function Records({
               >
                 {working ? "Saving…" : "Confirm decision"}
               </button>
-              {admin &&
+              {(create(user, "invoices") || create(user, "payments")) &&
                 ["Received", "Partially Received"].includes(detail.status) && (
                   <div className="actions">
-                    <button onClick={() => (location.hash = "invoices")}>
-                      Record invoice
-                    </button>
-                    <button onClick={() => (location.hash = "payments")}>
-                      Record payment
-                    </button>
+                    {create(user, "invoices") && (
+                      <button onClick={() => (location.hash = "invoices")}>
+                        Record invoice
+                      </button>
+                    )}
+                    {create(user, "payments") && (
+                      <button onClick={() => (location.hash = "payments")}>
+                        Record payment
+                      </button>
+                    )}
                   </div>
                 )}
             </section>
@@ -511,47 +533,52 @@ export function Records({
                   No supporting documents attached yet.
                 </p>
               )}
-              <div className="upload">
-                <select
-                  aria-label="Document type"
-                  value={kind}
-                  onChange={(e) => setKind(e.target.value)}
-                >
-                  {[
-                    "Receipt",
-                    "Invoice",
-                    "Quotation",
-                    "Delivery Note",
-                    "Payment Proof",
-                    "Donation Letter",
-                    "Grant Document",
-                    "Other",
-                  ].map((k) => (
-                    <option key={k}>{k}</option>
-                  ))}
-                </select>
-                <input
-                  aria-label="Evidence file"
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={(e) => setFile(e.target.files?.[0])}
-                />
-                <button
-                  disabled={!file || working}
-                  onClick={() =>
-                    action(async () => {
-                      const form = new FormData();
-                      form.append("entity", resource);
-                      form.append("entityId", detail.id);
-                      form.append("kind", kind);
-                      form.append("file", file!);
-                      await api("documents", "POST", form);
-                    })
-                  }
-                >
-                  Attach document
-                </button>
-              </div>
+              {has(user, "documents.upload") && (
+                <div className="upload">
+                  <select
+                    aria-label="Document type"
+                    value={kind}
+                    onChange={(e) => setKind(e.target.value)}
+                  >
+                    {(has(user, "documents.financial")
+                      ? [
+                          "Receipt",
+                          "Invoice",
+                          "Quotation",
+                          "Delivery Note",
+                          "Payment Proof",
+                          "Donation Letter",
+                          "Grant Document",
+                          "Other",
+                        ]
+                      : ["Delivery Note", "Receiving Document"]
+                    ).map((k) => (
+                      <option key={k}>{k}</option>
+                    ))}
+                  </select>
+                  <input
+                    aria-label="Evidence file"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => setFile(e.target.files?.[0])}
+                  />
+                  <button
+                    disabled={!file || working}
+                    onClick={() =>
+                      action(async () => {
+                        const form = new FormData();
+                        form.append("entity", resource);
+                        form.append("entityId", detail.id);
+                        form.append("kind", kind);
+                        form.append("file", file!);
+                        await api("documents", "POST", form);
+                      })
+                    }
+                  >
+                    Attach document
+                  </button>
+                </div>
+              )}
               <small>
                 PDF, JPG or PNG · Maximum 10 MB · Department access protected
               </small>
@@ -562,33 +589,42 @@ export function Records({
               <h3>{schemas[key].title}</h3>
               <Table
                 rows={records}
-                columns={schemas[key].columns}
+                columns={schemas[key].columns.filter(
+                  (k) =>
+                    !(
+                      receivingOnly &&
+                      ["estimatedAmount", "approvedAmount", "paid"].includes(k)
+                    ),
+                )}
                 lookups={lookups}
               />
             </section>
           ))}
-          <section className="workflow">
-            <h3>Transaction history</h3>
-            {history.length ? (
-              history.map((h) => (
-                <div className="history" key={h.id}>
-                  <strong>{h.action}</strong>
-                  <p>{h.description}</p>
-                  <small>
-                    {h.actor} · {new Date(h.createdAt).toLocaleString("en-GB")}
-                  </small>
-                  {h.oldValues && (
-                    <details>
-                      <summary>Previous values</summary>
-                      <pre>{h.oldValues}</pre>
-                    </details>
-                  )}
-                </div>
-              ))
-            ) : (
-              <p className="muted">No recorded changes yet.</p>
-            )}
-          </section>
+          {read(user, "audit") && (
+            <section className="workflow">
+              <h3>Transaction history</h3>
+              {history.length ? (
+                history.map((h) => (
+                  <div className="history" key={h.id}>
+                    <strong>{h.action}</strong>
+                    <p>{h.description}</p>
+                    <small>
+                      {h.actor} ·{" "}
+                      {new Date(h.createdAt).toLocaleString("en-GB")}
+                    </small>
+                    {h.oldValues && (
+                      <details>
+                        <summary>Previous values</summary>
+                        <pre>{h.oldValues}</pre>
+                      </details>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="muted">No recorded changes yet.</p>
+              )}
+            </section>
+          )}
           {error && <p className="error">{error}</p>}
         </Modal>
       )}
@@ -607,7 +643,7 @@ export function Records({
               category: detail.category,
             }}
             lookups={lookups}
-            admin={admin}
+            user={user}
             onCancel={() => setConvert(false)}
             onSave={async (v) => {
               await api(

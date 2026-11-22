@@ -93,6 +93,12 @@ public static class Seed
             u.PasswordHash = hash.HashPassword(u, "SchoolDemo123!");
             db.Users.Add(u);
         }
+        foreach (var profile in new[] { ("finance", "FINANCE", "Finance"), ("storekeeper", "STOREKEEPER", "Stores"), ("head", "DEPARTMENT_HEAD", "Kitchen"), ("auditor", "AUDITOR", "") })
+        {
+            var u = new User { Name = profile.Item2 + " Demo", Email = profile.Item1 + "@missionschool.local", Role = profile.Item2, DepartmentId = profile.Item3 == "" ? null : db.Departments.Single(d => d.Name == profile.Item3).Id, Position = profile.Item2 };
+            u.PasswordHash = hash.HashPassword(u, "SchoolDemo123!");
+            db.Users.Add(u);
+        }
         await db.SaveChangesAsync();
         foreach (var d in db.Departments.ToList())
         {

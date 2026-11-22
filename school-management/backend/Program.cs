@@ -42,6 +42,10 @@ builder
             if (
                 u == null
                 || !u.Active
+                || !RolePermissions.Valid(u.Role)
+                || u.Role != c.Principal!.FindFirstValue(ClaimTypes.Role)
+                || (u.DepartmentId?.ToString()??"") != c.Principal!.FindFirstValue("department")
+                || RolePermissions.Revision != c.Principal!.FindFirstValue("permissionsRevision")
                 || u.SessionVersion.ToString() != c.Principal!.FindFirstValue("version")
             )
                 c.RejectPrincipal();

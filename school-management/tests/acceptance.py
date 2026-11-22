@@ -1,31 +1,9 @@
-"""Live PostgreSQL acceptance suite. Run against an isolated DEMO database/server."""
-import json, urllib.request,urllib.error,http.cookiejar,uuid,csv,io,os
-BASE=os.environ.get('SCHOOL_URL','http://127.0.0.1:5000')+'/api/'
+import json,uuid,csv,io
+from http_client import Client,BASE
 tag=uuid.uuid4().hex[:8]
-class Client:
- def __init__(self):self.opener=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
- def call(self,path,method='GET',data=None,expect=200,raw=False):
-  headers={}
-  if method!='GET':headers['X-CSRF-TOKEN']=self.call('auth/csrf')['token']
-  if data is not None:headers['Content-Type']='application/json';data=json.dumps(data).encode()
-  req=urllib.request.Request(BASE+path,data=data,method=method,headers=headers)
-  try:
-   with self.opener.open(req) as r:status=r.status;body=r.read()
-  except urllib.error.HTTPError as e:status=e.code;body=e.read()
-  assert status==expect,(path,status,body.decode()[:1200])
-  return body if raw else json.loads(body) if body else None
- def create(self,r,**d):return self.call('records/'+r,'POST',d)['id']
- def login(self,email,password):return self.call('auth/login','POST',dict(email=email,password=password))
- def upload(self,entity,id,kind='Receipt'):
-  boundary='mission'+tag
-  parts=[]
-  for k,v in dict(entity=entity,entityId=id,kind=kind).items():parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode())
-  parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="evidence.pdf"\r\nContent-Type: application/pdf\r\n\r\n'.encode()+b'%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n'+f'\r\n--{boundary}--\r\n'.encode())
-  req=urllib.request.Request(BASE+'documents',data=b''.join(parts),headers={'Content-Type':'multipart/form-data; boundary='+boundary,'X-CSRF-TOKEN':self.call('auth/csrf')['token']})
-  with self.opener.open(req) as r:return json.load(r)['id']
 a=Client();a.login('admin@missionschool.local','Admin123!')
 dep=a.create('departments',name='Acceptance '+tag,head='Head Teacher',active=True)
-uid=a.create('users',name='Acceptance Worker',email=tag+'@missionschool.local',departmentId=dep,position='Officer',role='USER',password='SchoolTest123!',active=True)
+uid=a.create('users',name='Acceptance Worker',email=tag+'@missionschool.local',departmentId=dep,position='Officer',role='STAFF',password='SchoolTest123!',active=True)
 u=Client();u.login(tag+'@missionschool.local','SchoolTest123!');print('PASS 1: Admin creates department and worker; worker logs in')
 category=a.call('records/categories')[0]['id'];supplier=a.call('records/suppliers')[0]['id']
 budget=a.create('budgets',name='Acceptance allocation '+tag,departmentId=dep,categoryId=category,amount=100000,year='2026',startDate='2026-01-01',endDate='2026-12-31')
@@ -46,7 +24,7 @@ r2=request();status(u,r2,'Submitted');status(a,r2,'Rejected');assert summary()['
 print('PASS 5: Rejected request reserves no funds')
 account=a.create('petty-accounts',name='Acceptance imprest',departmentId=dep)
 def petty(client,kind,amt):return client.create('petty-transactions',accountId=account,budgetId=budget,kind=kind,amount=amt,purpose='Cleaning supplies',person='Kitchen worker',reference=tag+'-'+kind,date='2026-11-22')
-petty(a,'Opening',30000);pt=petty(u,'Expense',2300);assert next(x for x in a.call('records/petty-accounts') if x['id']==account)['balance']==27700;a.upload('petty-transactions',pt);petty(a,'Replenishment',2300);assert next(x for x in a.call('records/petty-accounts') if x['id']==account)['balance']==30000
+petty(a,'Opening',30000);pt=petty(a,'Expense',2300);assert next(x for x in a.call('records/petty-accounts') if x['id']==account)['balance']==27700;a.upload('petty-transactions',pt);petty(a,'Replenishment',2300);assert next(x for x in a.call('records/petty-accounts') if x['id']==account)['balance']==30000
 print('PASS 6: Imprest spending, receipt and replenishment')
 income=a.create('income',source='Mission church',donor='Church partner',type='Donation',amount=250000,purpose='School operations',reference='DON-'+tag,date='2026-11-22');assert any(i['id']==income for i in a.call('records/income'))
 print('PASS 7: Financial donation recorded')
@@ -63,7 +41,7 @@ export=a.call('insights/reports?name=Department+Expenditure&departmentId='+str(d
 print('PASS 11: Filtered report and matching CSV')
 u.call('records/users',expect=403);u.call('records/departments','POST',{'name':'Forbidden'},expect=403);other=Client();other.login('kitchen@missionschool.local','SchoolDemo123!');assert not any(x['id']==r for x in other.call('records/requests'));other.call('documents/'+str(proof),expect=403)
 print('PASS 12: Admin endpoints and cross-department document/record access rejected')
-u.call('records/petty-transactions','POST',dict(accountId=account,budgetId=budget,kind='Expense',amount=99999,purpose='Overdraw',person='Worker'),expect=400)
+a.call('records/petty-transactions','POST',dict(accountId=account,budgetId=budget,kind='Expense',amount=99999,purpose='Overdraw',person='Worker'),expect=400)
 a.call('records/movements','POST',dict(inventoryItemId=item,kind='Issued',quantity=99999),expect=400)
 a.call('workflows/payments','POST',dict(purchaseRequestId=r,invoiceId=inv,amount=1,method='Cash',reference='BAD-'+tag,payee='Supplier',date='2026-11-22',overrideReason='',finalPayment=False),expect=400)
 print('PASS: Negative balance, excess stock issue and payment after completion rejected')
@@ -85,9 +63,9 @@ u.call(f'workflows/petty-requests/{funding}/decision','POST',dict(approve=True,c
 a.call(f'workflows/petty-requests/{funding}/decision','POST',dict(approve=True,comment='FUND-'+tag));assert next(x for x in a.call('records/petty-accounts') if x['id']==account)['balance']==35000
 a.call(f'workflows/petty-requests/{funding}/decision','POST',dict(approve=True,comment='Duplicate approval'),expect=400)
 print('PASS: Department funding request, Admin approval and single replenishment')
-advance=petty(u,'Withdrawal',5000)
-u.create('petty-transactions',accountId=account,budgetId=budget,kind='Expense',withdrawalId=advance,amount=3000,purpose='Advance spent',person='Kitchen worker',reference='SETTLE-'+tag)
-u.create('petty-transactions',accountId=account,kind='Return',withdrawalId=advance,amount=2000,purpose='Unused cash returned',person='Kitchen worker',reference='RETURN-'+tag)
+advance=petty(a,'Withdrawal',5000)
+a.create('petty-transactions',accountId=account,budgetId=budget,kind='Expense',withdrawalId=advance,amount=3000,purpose='Advance spent',person='Kitchen worker',reference='SETTLE-'+tag)
+a.create('petty-transactions',accountId=account,kind='Return',withdrawalId=advance,amount=2000,purpose='Unused cash returned',person='Kitchen worker',reference='RETURN-'+tag)
 pa=next(x for x in a.call('records/petty-accounts') if x['id']==account);assert pa['balance']==32000 and pa['outstandingAdvances']==0,pa
-u.call('records/petty-transactions','POST',dict(accountId=account,budgetId=budget,kind='Expense',withdrawalId=advance,amount=1,purpose='Oversettle',person='Worker'),expect=400)
+a.call('records/petty-transactions','POST',dict(accountId=account,budgetId=budget,kind='Expense',withdrawalId=advance,amount=1,purpose='Oversettle',person='Worker'),expect=400)
 print('PASS: Withdrawal settlement avoids double cash debit; unused cash return; excess settlement rejected')

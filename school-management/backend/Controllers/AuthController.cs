@@ -26,9 +26,12 @@ public class AuthController(SchoolDb db, IPasswordHasher<User> hasher, IAntiforg
     {
         var email = input.Email.Trim().ToLowerInvariant();
         var u = await db.Users.SingleOrDefaultAsync(x => x.Email == email);
-        if (u == null || !u.Active || u.LockedUntil > DateTime.UtcNow)
+        if (u == null || !RolePermissions.Valid(u.Role) || !u.Active || u.LockedUntil > DateTime.UtcNow)
             return Unauthorized(
-                new { error = "Invalid credentials or account temporarily locked." }
+                new
+                {
+                    error = "Invalid credentials or account temporarily locked."
+                }
             );
         if (
             hasher.VerifyHashedPassword(u, u.PasswordHash, input.Password)
@@ -39,7 +42,10 @@ public class AuthController(SchoolDb db, IPasswordHasher<User> hasher, IAntiforg
             if (u.FailedLogins >= 5)
                 u.LockedUntil = DateTime.UtcNow.AddMinutes(15);
             await db.SaveChangesAsync();
-            return Unauthorized(new { error = "Invalid credentials." });
+            return Unauthorized(new
+            {
+                error = "Invalid credentials."
+            });
         }
         u.FailedLogins = 0;
         u.LockedUntil = null;
@@ -51,6 +57,7 @@ public class AuthController(SchoolDb db, IPasswordHasher<User> hasher, IAntiforg
             new Claim(ClaimTypes.Role, u.Role),
             new Claim("department", u.DepartmentId?.ToString() ?? ""),
             new Claim("version", u.SessionVersion.ToString()),
+            new Claim("permissionsRevision",RolePermissions.Revision),
         };
         await HttpContext.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme,
@@ -70,16 +77,22 @@ public class AuthController(SchoolDb db, IPasswordHasher<User> hasher, IAntiforg
             }
         );
         await db.SaveChangesAsync();
-        return Ok(
-            new
-            {
-                u.Id,
-                u.Name,
-                u.Email,
-                u.Role,
-                u.DepartmentId,
-            }
-        );
+        return Ok(Profile(u));
+    }
+    object Profile(User u)
+    {
+        return new
+        {
+            u.Id,
+            u.Name,
+            u.Email,
+            u.Role,
+            u.DepartmentId,
+            Permissions = RolePermissions.Effective(u.Role),
+            Access = ResourcePermissions.ClientAccess(u.Role),
+            Reports = ResourcePermissions.Reports.Keys.Where(name => ResourcePermissions.CanReport(u.Role, name)),
+            AssignableRoles = RolePermissions.Has(u.Role, "users.manage") ? RolePermissions.Names : []
+        };
     }
 
     [Authorize, HttpGet("me")]
@@ -88,14 +101,7 @@ public class AuthController(SchoolDb db, IPasswordHasher<User> hasher, IAntiforg
         var u = await db.Users.FindAsync(
             int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!)
         );
-        return new
-        {
-            u!.Id,
-            u.Name,
-            u.Email,
-            u.Role,
-            u.DepartmentId,
-        };
+        return Profile(u!);
     }
 
     [Authorize, HttpPost("logout")]
@@ -117,7 +123,10 @@ public class AuthController(SchoolDb db, IPasswordHasher<User> hasher, IAntiforg
             hasher.VerifyHashedPassword(u!, u!.PasswordHash, i.CurrentPassword)
             == PasswordVerificationResult.Failed
         )
-            return BadRequest(new { error = "Current password is incorrect." });
+            return BadRequest(new
+            {
+                error = "Current password is incorrect."
+            });
         ValidatePassword(i.Password);
         u.PasswordHash = hasher.HashPassword(u, i.Password);
         u.SessionVersion++;

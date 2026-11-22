@@ -126,8 +126,8 @@ For a **clean real installation**, use a new empty database and `dotnet run -- -
 
 - **Requests:** New request → add item quantities/prices → save draft → Open → submit. Admin opens Pending Approvals, chooses an active supplier, approved amount and comments. A return or rejection needs a reason. Returned requests can be edited and submitted again.
 - **Delivery/payment:** Open approved request → Ordered → Partially Received / Received. Record inventory receipts under Inventory → Stock Movements and link the request. Under Payments → Invoices, record the supplier's invoice and attach evidence. Under Payments, record each actual payment with the matching invoice and a unique reference. Partial payments reduce commitment only by the amount paid. Choose **Final payment** when all goods are received and every recorded invoice is settled; this releases any unused approval. Open the request to complete it. Its history, invoices and payments remain visible.
-- **Expenses:** Admin records direct authorised payments against a department allocation, with supplier/person, payment reference and responsible person. Attach receipts from Open → Supporting evidence. The budget is charged immediately because this records an actual payment.
-- **Petty cash:** Staff use Request funds / decisions to submit a funding request; Admin approves with comments/reference, posting the replenishment atomically, or rejects with a reason. Admin creates a departmental account, then an Opening movement. Department staff may record Expense or Withdrawal movements in their own account. Expense requires a department budget and affects spending. Replenishment restores the cash balance without charging the budget again. Withdrawal records accountable cash issued, not an expense. To settle it, create an Expense and select the original withdrawal; this charges the budget without debiting petty cash twice. Return unused cash using a Return movement linked to that withdrawal. Settlements cannot exceed the outstanding advance. Account details show unretired advances separately. Attach receipts to spending records. Staff cannot overdraw.
+- **Expenses:** Admin or Finance records direct authorised payments against a department allocation, with supplier/person, payment reference and responsible person. Attach receipts from Open → Supporting evidence. The budget is charged immediately because this records an actual payment.
+- **Petty cash:** Staff use Request funds / decisions to submit a funding request; Admin or Finance approves with comments/reference, posting the replenishment atomically, or rejects with a reason. Admin or Finance creates a departmental account, then an Opening movement. Only Admin or Finance may post Expense, Withdrawal, Return, Opening or Replenishment movements; departmental users request funding and attach permitted evidence. Expense requires a department budget and affects spending. Replenishment restores the cash balance without charging the budget again. Withdrawal records accountable cash issued, not an expense. To settle it, create an Expense and select the original withdrawal; this charges the budget without debiting petty cash twice. Return unused cash using a Return movement linked to that withdrawal. Settlements cannot exceed the outstanding advance. Account details show unretired advances separately. Attach receipts to spending records. No cash account can be overdrawn.
 - **Donations:** Record Donation, Grant or Other Income, with source, donor and restricted purpose. For a non-cash donation first create the inventory item, choose Non-cash Donation and its quantity. A stock movement is posted in the same database transaction. Restricted purposes are highlighted in record detail.
 - **Inventory/assets:** Record receipts, issues, returns, damage, loss, adjustments or transfers. Quantities come only from movements. Positive Adjusted movements add units; use Damaged/Lost for reductions. Transfers create a destination stock item and corresponding receipt. Open a Permanent Item and assign one unit to the asset register; this removes it from stock and records a linked asset. Each unit can have its own serial number after editing. Maintenance expenses linked to the asset appear in its lifetime cost.
 - **Evidence:** Open a request, invoice, payment, expense, petty cash movement, donation, inventory item or asset; attach a PDF, PNG or JPEG, up to 10 MB. Extensions and signatures are validated. Evidence is stored outside the web root. Downloads require login and correct department access. Missing evidence and missing physical files are flagged.
@@ -139,7 +139,7 @@ Money uses PostgreSQL `numeric(18,2)` and C# `decimal`. The server calculates it
 
 Financial mutations use PostgreSQL serializable transactions. Concurrent conflicts return an actionable 409 response. Foreign keys prevent orphaned records; ledger entries are not deleted through the UI. Audit records are append-only through the application. The database administrator remains a trusted operator with direct database access.
 
-Passwords use ASP.NET Core's password hasher. Authentication uses encrypted HTTP-only SameSite=Strict cookies and anti-forgery tokens on every mutation, including login. The API checks department/ADMIN access independently of the frontend. Navigation objects from input are discarded before EF binding. There are two roles today, with access decisions centralised for later extension. Financial catalogues and final approvals are Admin-only; staff can submit requests, attach their department's evidence and record authorised imprest usage. Users see department-scoped activity; central inventory is shared only when no department owns the item. No external email, payment provider or cloud dependency exists.
+Passwords use ASP.NET Core's password hasher. Authentication uses encrypted HTTP-only SameSite=Strict cookies and anti-forgery tokens on every mutation, including login. The API checks department/ADMIN access independently of the frontend. Navigation objects from input are discarded before EF binding. Six centrally mapped roles now separate finance, stores, departmental work and read-only oversight. Final financial approval and budget overrides remain Owner/Admin-only; financial posting belongs to Finance and physical stock management to Storekeeper. Staff submit their own requests and funding requests, while Department Heads collaborate across their department. Users see department-scoped activity; central inventory is shared only when no department owns the item. No external email, payment provider or cloud dependency exists.
 
 ## Build and test
 
@@ -203,7 +203,7 @@ Back up the PostgreSQL database with `pg_dump -Fc` and the **entire** configured
 
 - This is a single-school, single-currency system. It does not include tuition billing, payroll processing, bank reconciliation or automatic M-Pesa/bank integrations.
 - Restricted donations are explicitly labelled by purpose; automatic fund-by-fund disbursement limits are not implemented.
-- Permissions currently use Admin and department-user roles; configurable officer-level permission sets are a future extension.
+- Roles and permissions are centrally maintained in `RolePermissions.cs`. There is no per-user permission-grant editor or custom-role management screen; changing the mapping requires a code deployment and invalidates existing sessions.
 - PDF export uses the browser's Save as PDF; no server PDF engine is installed.
 - Reporting is transaction-level with live allocation totals; large datasets currently load scoped records before table pagination. Database-side pagination/aggregation should be added before multi-year high-volume use.
 - Evidence accepts PDF/JPEG/PNG rather than editable Office documents. Antivirus scanning, scheduled backups and Windows service installation are operational additions.
@@ -220,3 +220,52 @@ The dashboard includes an interactive monthly spending/cash-income graph, budget
 Budgets, requests, expenses, payments, income, petty cash, inventory and assets also include visual overviews. Reports show charts calculated from the same filtered records as their CSV exports. Module charts summarise all authorised module records; table search operates on the record table. All chart monetary aggregation uses C# decimal on the server. Charts honour department permissions, support keyboard access and exact-value disclosures, print locally and require no external chart service.
 
 Chart verification: 15 backend tests passed; all 6 browser tests passed on the isolated verification database, including chart totals, report filters, drill-down navigation and mobile/department scope. The final responsive chart changes also passed the 3 focused chart tests.
+
+## Authorization and role assignment
+
+Admin assigns `ADMIN`, `FINANCE`, `STOREKEEPER`, `DEPARTMENT_HEAD`, `STAFF` or `AUDITOR` under Users. Department is mandatory for Staff and Department Head; it is optional for the school-wide roles and Storekeeper. All access is checked by ASP.NET Core, independently of the UI. Effective permissions and read/create/edit/scope capabilities are returned by `/api/auth/me` and login. The UI uses these capabilities rather than role-name checks.
+
+| Capability | Admin / Owner | Finance | Storekeeper | Department Head | Staff | Auditor |
+|---|---|---|---|---|---|---|
+| Users, roles, departments, budget changes | Manage | No writes | No | No | No | No writes |
+| Budget override / final purchase approval | Yes, audited | No | No | No | No | No |
+| Create/edit/submit purchase requests | All | View all | Receiving view | Department | Own only | View all |
+| Invoices, payments, expenses, suppliers, income | Manage all | Manage all | Supplier contacts only | Read department expenses/invoices/payments | No detailed financial posting/read | Read all |
+| Petty cash movements and funding decisions | Manage all | Manage all | No | View department, request funding | Request/track own funding | Read all |
+| Stock items, locations and movements | Manage all | Read inventory values | Manage school-wide | Read department items | Read department items | Read all |
+| Permanent stock → asset | Yes | No | Yes, recorded stock cost only | No | No | No |
+| General asset editing | Yes | Read all | Read all / convert stock | Read department | Read department | Read all |
+| Documents | Read/upload all | Read/upload authorised financial/stock evidence | Delivery/receiving evidence only | Read/upload on permitted department records | Read/upload on own requests and permitted department stock/assets | Read only |
+| Reports | All | Financial school-wide | Stores / permitted purchasing | Permitted department reports | Permitted budget/own-request/stock reports | All, read only |
+| Audit history | All, read only | Financial events school-wide, read only | No | Permitted department events | Permitted own/department events | All, read only |
+
+Additional safeguards:
+
+- Role permissions live in `backend/Services/RolePermissions.cs`; resource authorization and independent department/ownership checks live in `Access.cs`. Controllers use permission/resource gates, with no `RequireAdmin()` calls remaining.
+- Storekeeper's request view includes approved/fulfilment-stage orders only. Budget IDs, approved/estimated/paid amounts, item prices and unrelated notes are removed server-side. Supplier bank/M-Pesa details and financial totals are also removed from the basic supplier view.
+- A non-Admin cannot approve their own request/funding request. Admin self-approval requires a reason and creates an audit event. Finance cannot approve purchases or override a budget/approval ceiling by entering a reason alone.
+- Payment `CreatedBy`/`CreatedAt` identify the recorder and timestamp; `ApprovedBy` identifies the original request approver from approval history. Their identities remain separate.
+- Document listing, upload and download recheck the current linked entity and allowed evidence kinds. Moving an asset/item between departments removes the former department's access even if old document metadata still names that department.
+- Role, department, status and password changes increment SessionVersion. Cookies also validate the current database role/department and a permission-mapping fingerprint. A permission-map deployment revokes old sessions. Everyone must sign in again after this upgrade.
+- Audit endpoints remain immutable for every role, including Admin. Security events are not exposed through Finance's financial-history view.
+
+### Migration and verification
+
+`20261122155036_ExpandRolePermissions` maps legacy `USER` accounts to `STAFF` without changing IDs/passwords or financial records, increments their session versions, records the migration in audit history and adds role/department constraints. If a malformed legacy USER lacks a department, it is preserved but deactivated and assigned to an inactive migration holding department for Admin review. Apply with `dotnet ef database update` or `dotnet run -- --migrate` after a backup. Do not seed over an existing installation.
+
+Fresh demo seeds additionally provide `finance@missionschool.local`, `storekeeper@missionschool.local`, `head@missionschool.local` and `auditor@missionschool.local`, all with the development password `SchoolDemo123!`. Existing installations retain their existing accounts; Admin creates/assigns any new officers explicitly.
+
+Authorization verification uses a disposable seeded PostgreSQL server, not the real school database:
+
+```bash
+SCHOOL_URL=http://127.0.0.1:5001 python3 tests/permissions_acceptance.py
+SCHOOL_URL=http://127.0.0.1:5001 python3 tests/acceptance.py
+# From frontend, with the compiled app served on the verification API origin:
+SCHOOL_BROWSER_URL=http://127.0.0.1:5001 SCHOOL_CHROME=/usr/bin/google-chrome npx playwright test
+```
+
+PowerShell uses `$env:SCHOOL_URL=...`, `$env:SCHOOL_BROWSER_URL=...` and `py` for the equivalent commands. Use downloaded Playwright Chromium if `SCHOOL_CHROME` is unset.
+
+Limitations: role definitions are code-managed, there are no custom per-user grants or multi-role assignments, and Staff requests are private to their creator rather than selectively shared. Storekeeper receiving access is based on approved workflow status; there is no separate goods-versus-services classification in the existing request schema. These defaults keep access narrow and can be extended centrally.
+
+Permission refactor verification: backend build passed with zero warnings/errors; all 55 backend tests and all 13 Playwright tests passed, both live PostgreSQL suites passed, local migration preserved all five existing user IDs and financial totals, and Windows self-contained publishing passed. Windows execution remains untested on this Ubuntu machine.

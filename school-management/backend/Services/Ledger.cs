@@ -68,13 +68,14 @@ public class Ledger(SchoolDb db, Access access)
         var b =
             await db.Budgets.FindAsync(budgetId)
             ?? throw new ArgumentException("Budget not found.");
-        if (b.DepartmentId != department && !(access.Admin && b.DepartmentId == null))
+        if (b.DepartmentId != department && !(access.All("budgets") && b.DepartmentId == null))
             throw new ArgumentException("Choose a budget belonging to this department.");
         if (extra > await Available(budgetId))
         {
-            if (!access.Admin || string.IsNullOrWhiteSpace(reason))
+            access.RequirePermission("budgets.override");
+            if (string.IsNullOrWhiteSpace(reason))
                 throw new ArgumentException(
-                    "Amount exceeds available budget. An Admin must supply an override reason."
+                    "Amount exceeds available budget. An authorised budget officer must supply an override reason."
                 );
             access.Audit("Budget override", "budgets", budgetId, department, reason);
         }

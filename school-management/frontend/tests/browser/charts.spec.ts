@@ -100,7 +100,7 @@ test("Department chart endpoints stay scoped to the signed-in department", async
 }) => {
   await login(page, "kitchen@missionschool.local", "SchoolDemo123!");
   const me = await (await page.request.get("/api/auth/me")).json();
-  for (const resource of ["budgets", "requests", "expenses", "payments"]) {
+  for (const resource of ["budgets", "requests"]) {
     const response = await page.request.get("/api/insights/charts/" + resource);
     expect(response.ok()).toBeTruthy();
     const chart = await response.json();
@@ -108,6 +108,10 @@ test("Department chart endpoints stay scoped to the signed-in department", async
       chart.comparison.every((p: any) => p.key === String(me.departmentId)),
     ).toBeTruthy();
   }
+  for (const resource of ["expenses", "payments"])
+    expect(
+      (await page.request.get("/api/insights/charts/" + resource)).status(),
+    ).toBe(403);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
     page.getByRole("heading", { name: "Every shilling, accounted for." }),

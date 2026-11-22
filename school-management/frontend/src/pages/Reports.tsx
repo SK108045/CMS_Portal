@@ -2,9 +2,16 @@ import { ChartSummary } from "../components/charts/Charts";
 import { VisualSummary } from "../components/charts/ModuleInsights";
 import { useEffect, useState } from "react";
 import { api, Row } from "../api";
-import { reports } from "../schema";
+
 import { Table } from "../components/Table";
-export function Reports({ lookups }: { lookups: Record<string, Row[]> }) {
+export function Reports({
+  lookups,
+  user,
+}: {
+  lookups: Record<string, Row[]>;
+  user: Row;
+}) {
+  const allowedReports: string[] = user.reports || [];
   const [filters, setFilters] = useState<Row>({
     from: new URLSearchParams(location.hash.split("?")[1]).get("from") || "",
     to: new URLSearchParams(location.hash.split("?")[1]).get("to") || "",
@@ -13,7 +20,7 @@ export function Reports({ lookups }: { lookups: Record<string, Row[]> }) {
       "",
     name:
       new URLSearchParams(location.hash.split("?")[1]).get("name") ||
-      reports[0],
+      allowedReports[0],
   });
   const [summary, setSummary] = useState<ChartSummary>();
   const [rows, setRows] = useState<Row[]>([]);
@@ -26,6 +33,10 @@ export function Reports({ lookups }: { lookups: Record<string, Row[]> }) {
   ).toString();
   useEffect(() => {
     let live = true;
+    if (!allowedReports.includes(filters.name)) {
+      setError("This report is not permitted.");
+      return;
+    }
     setBusy(true);
     Promise.all([
       api("insights/reports?" + params),
@@ -71,7 +82,7 @@ export function Reports({ lookups }: { lookups: Record<string, Row[]> }) {
             value={filters.name}
             onChange={(e) => setFilters({ ...filters, name: e.target.value })}
           >
-            {reports.map((r) => (
+            {allowedReports.map((r) => (
               <option key={r}>{r}</option>
             ))}
           </select>
