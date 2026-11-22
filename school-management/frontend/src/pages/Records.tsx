@@ -1,3 +1,4 @@
+import { ModuleInsights } from "../components/charts/ModuleInsights";
 import { useEffect, useState } from "react";
 import { api, Row, kes } from "../api";
 import { schemas } from "../schema";
@@ -190,6 +191,9 @@ export function Records({
           {error}
           <button onClick={() => setError("")}>Dismiss</button>
         </div>
+      )}
+      {!busy && !approvalQueue && (
+        <ModuleInsights resource={resource} rows={rows} />
       )}
       {busy ? (
         <div className="loading">Loading records…</div>

@@ -14,6 +14,7 @@ builder.Services.AddDbContext<SchoolDb>(o =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<Access>();
 builder.Services.AddScoped<Ledger>();
+builder.Services.AddScoped<VisualAnalytics>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder
     .Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -104,19 +105,28 @@ app.Use(
         catch (UnauthorizedAccessException e)
         {
             ctx.Response.StatusCode = 403;
-            await ctx.Response.WriteAsJsonAsync(new { error = e.Message });
+            await ctx.Response.WriteAsJsonAsync(new
+            {
+                error = e.Message
+            });
         }
         catch (System.Text.Json.JsonException)
         {
             ctx.Response.StatusCode = 400;
             await ctx.Response.WriteAsJsonAsync(
-                new { error = "Invalid field format. Check numbers, dates and required fields." }
+                new
+                {
+                    error = "Invalid field format. Check numbers, dates and required fields."
+                }
             );
         }
         catch (ArgumentException e)
         {
             ctx.Response.StatusCode = 400;
-            await ctx.Response.WriteAsJsonAsync(new { error = e.Message });
+            await ctx.Response.WriteAsJsonAsync(new
+            {
+                error = e.Message
+            });
         }
         catch (DbUpdateException)
         {
@@ -172,7 +182,10 @@ app.Use(
             {
                 ctx.Response.StatusCode = 400;
                 await ctx.Response.WriteAsJsonAsync(
-                    new { error = "Security token expired. Refresh the page." }
+                    new
+                    {
+                        error = "Security token expired. Refresh the page."
+                    }
                 );
                 return;
             }
@@ -184,4 +197,6 @@ app.MapControllers();
 app.MapFallbackToFile("index.html");
 app.Run();
 
-public partial class Program { }
+public partial class Program
+{
+}

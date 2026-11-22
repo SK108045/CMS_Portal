@@ -16,7 +16,8 @@ public class InsightsController(
     SchoolDb db,
     Access access,
     Ledger ledger,
-    IPasswordHasher<User> hasher
+    IPasswordHasher<User> hasher,
+    VisualAnalytics analytics
 ) : ControllerBase
 {
     async Task<JsonArray> Rows(string resource)
@@ -39,9 +40,19 @@ public class InsightsController(
         var expenses = await Rows("expenses");
         var petty = await Rows("petty-accounts");
         var income = await Rows("income");
+        var pettyExpenses = (await Rows("petty-transactions")).Where(x => x?["kind"]?.GetValue<string>() == "Expense").Select(x => x!.AsObject()).ToList();
+        var spending = payments.Concat(expenses).Select(x => x!.AsObject()).Concat(pettyExpenses).ToList();
+        var charts = new
+        {
+            Budgets = await analytics.Build("budgets", budgets.Select(x => x!.AsObject())),
+            Spending = await analytics.Build("transactions", spending),
+            Income = await analytics.Build("income", income.Select(x => x!.AsObject())),
+            Requests = await analytics.Build("requests", requests.Select(x => x!.AsObject()))
+        };
         decimal Sum(JsonArray a, string k) => a.Sum(x => x?[k]?.GetValue<decimal>() ?? 0);
         return new
         {
+            Charts = charts,
             Budget = Sum(budgets, "amount"),
             Committed = Sum(budgets, "committed"),
             Spent = Sum(budgets, "spent"),
@@ -49,8 +60,7 @@ public class InsightsController(
             Pending = requests.Count(x =>
                 new[] { "Submitted", "Under Review" }.Contains(x?["status"]?.GetValue<string>())
             ),
-            MissingEvidence = payments
-                .Concat(expenses)
+            MissingEvidence = spending
                 .Count(x => x?["missingDocuments"]?.GetValue<bool>() == true),
             PettyCash = Sum(petty, "balance"),
             Donations = income
@@ -75,6 +85,22 @@ public class InsightsController(
                 })
                 .OrderBy(x => x.Month),
         };
+    }
+
+    [HttpGet("charts/{resource}")]
+    public async Task<object> Charts(string resource)
+    {
+        if (!new[] { "budgets", "requests", "expenses", "payments", "income", "inventory", "assets", "petty-accounts", "petty-transactions", "petty-requests" }.Contains(resource))
+            throw new ArgumentException("No visual summary is available for this module.");
+        return await analytics.Build(resource, (await Rows(resource)).Select(x => x!.AsObject()));
+    }
+
+    [HttpGet("report-charts")]
+    public async Task<object> ReportCharts(string name = "Budget vs Actual", string? from = null, string? to = null, int? departmentId = null, int? categoryId = null, int? supplierId = null, string? status = null, string? search = null)
+    {
+        var result = await Report(name, from, to, departmentId, categoryId, supplierId, status, search, false) as OkObjectResult;
+        var rows = (List<JsonObject>)result!.Value!;
+        return await analytics.Build(name == "Transaction Report" ? "transactions" : Reports[name], name == "Transaction Report" ? rows.Where(r => r["type"] == null && (r["kind"] == null || r["kind"]?.ToString() == "Expense")) : rows);
     }
 
     static readonly Dictionary<string, string> Reports = new()

@@ -2,8 +2,10 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/browser",
   timeout: 60000,
+  expect: { timeout: 15000 },
+  workers: 1,
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: process.env.SCHOOL_BROWSER_URL || "http://127.0.0.1:5173",
     launchOptions: {
       executablePath: process.env.SCHOOL_CHROME || undefined,
       args: ["--no-sandbox"],

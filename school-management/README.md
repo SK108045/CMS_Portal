@@ -212,3 +212,11 @@ Back up the PostgreSQL database with `pg_dump -Fc` and the **entire** configured
 ## Verified delivery
 
 On Ubuntu, 22 November 2026: backend build passed with zero warnings/errors; 15 xUnit tests passed; the twelve live PostgreSQL acceptance workflows and additional integrity checks passed; all 3 Playwright browser tests passed; React production build passed; self-contained `win-x64` publish passed. Build/test output is retained in `tests/verification-results.txt`. Windows runtime operation still needs testing on Windows.
+
+## Live charts
+
+The dashboard includes an interactive monthly spending/cash-income graph, budget breakdown, stacked department comparisons, income mix and purchase-request stages. Select a department bar, stage or month to open the relevant records. The monthly chart has a year selector and does not draw invented future observations.
+
+Budgets, requests, expenses, payments, income, petty cash, inventory and assets also include visual overviews. Reports show charts calculated from the same filtered records as their CSV exports. Module charts summarise all authorised module records; table search operates on the record table. All chart monetary aggregation uses C# decimal on the server. Charts honour department permissions, support keyboard access and exact-value disclosures, print locally and require no external chart service.
+
+Chart verification: 15 backend tests passed; all 6 browser tests passed on the isolated verification database, including chart totals, report filters, drill-down navigation and mobile/department scope. The final responsive chart changes also passed the 3 focused chart tests.

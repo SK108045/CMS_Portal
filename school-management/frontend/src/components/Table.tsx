@@ -52,7 +52,9 @@ export function Table({
   const [supplier, setSupplier] = useState(
     new URLSearchParams(location.hash.split("?")[1]).get("supplierId") || "",
   );
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(
+    new URLSearchParams(location.hash.split("?")[1]).get("status") || "",
+  );
   const filtered = rows
     .filter(
       (r) =>

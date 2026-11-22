@@ -90,12 +90,14 @@ test("Department portal creates and submits a real request", async ({
   await page.getByRole("button", { name: "Save record", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByPlaceholder("Search records…").fill(purpose);
-  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.locator(".table-panel tbody tr")).toHaveCount(1);
   await page.getByRole("button", { name: "Open ↗" }).click();
   await page.getByLabel("Next stage").selectOption("Submitted");
   await page.getByRole("button", { name: "Confirm decision" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.locator("tbody").first()).toContainText("Submitted");
+  await expect(page.locator(".table-panel tbody").first()).toContainText(
+    "Submitted",
+  );
 });
 
 test("Petty cash funding request is approved through the browser", async ({
@@ -119,7 +121,9 @@ test("Petty cash funding request is approved through the browser", async ({
   await page.getByRole("button", { name: "Save record", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByPlaceholder("Search records…").fill(purpose);
-  await expect(page.locator("tbody").first()).toContainText("Pending");
+  await expect(page.locator(".table-panel tbody").first()).toContainText(
+    "Pending",
+  );
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await page
     .getByRole("dialog")
@@ -135,12 +139,14 @@ test("Petty cash funding request is approved through the browser", async ({
   ).toBeVisible();
   await page.goto("/#petty-requests");
   await page.getByPlaceholder("Search records…").fill(purpose);
-  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.locator(".table-panel tbody tr")).toHaveCount(1);
   await page.getByRole("button", { name: "Open ↗" }).click();
   await page
     .getByLabel("Decision comments / cash issue reference")
     .fill("Approved top-up for kitchen");
   await page.getByRole("button", { name: "Approve & replenish" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.locator("tbody").first()).toContainText("Approved");
+  await expect(page.locator(".table-panel tbody").first()).toContainText(
+    "Approved",
+  );
 });

@@ -1,13 +1,21 @@
+import { ChartSummary } from "../components/charts/Charts";
+import { VisualSummary } from "../components/charts/ModuleInsights";
 import { useEffect, useState } from "react";
 import { api, Row } from "../api";
 import { reports } from "../schema";
 import { Table } from "../components/Table";
 export function Reports({ lookups }: { lookups: Record<string, Row[]> }) {
   const [filters, setFilters] = useState<Row>({
+    from: new URLSearchParams(location.hash.split("?")[1]).get("from") || "",
+    to: new URLSearchParams(location.hash.split("?")[1]).get("to") || "",
+    departmentId:
+      new URLSearchParams(location.hash.split("?")[1]).get("departmentId") ||
+      "",
     name:
       new URLSearchParams(location.hash.split("?")[1]).get("name") ||
       reports[0],
   });
+  const [summary, setSummary] = useState<ChartSummary>();
   const [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -19,10 +27,14 @@ export function Reports({ lookups }: { lookups: Record<string, Row[]> }) {
   useEffect(() => {
     let live = true;
     setBusy(true);
-    api("insights/reports?" + params)
-      .then((r) => {
+    Promise.all([
+      api("insights/reports?" + params),
+      api("insights/report-charts?" + params),
+    ])
+      .then(([r, chart]) => {
         if (live) {
           setRows(r);
+          setSummary(chart);
           setError("");
         }
       })
@@ -113,6 +125,12 @@ export function Reports({ lookups }: { lookups: Record<string, Row[]> }) {
         </label>
       </div>
       {error && <p className="error">{error}</p>}
+      {!busy && !error && summary && (
+        <VisualSummary
+          summary={summary}
+          caption="FILTERED REPORT · MATCHES CSV EXPORT"
+        />
+      )}
       {busy ? (
         <div className="loading">Preparing report…</div>
       ) : (
