@@ -1,0 +1,11 @@
+import {execFileSync} from 'node:child_process';
+import {cpSync,mkdirSync,rmSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
+import path from 'node:path';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const npm=process.platform==='win32'?'npm.cmd':'npm';
+execFileSync(npm,['run','build'],{cwd:path.join(root,'frontend'),stdio:'inherit',shell:process.platform==='win32'});
+rmSync(path.join(root,'backend','wwwroot'),{recursive:true,force:true});
+mkdirSync(path.join(root,'backend','wwwroot'),{recursive:true});
+cpSync(path.join(root,'frontend','dist'),path.join(root,'backend','wwwroot'),{recursive:true});
+execFileSync('dotnet',['publish','backend/School.Api.csproj','-c','Release',...process.argv.slice(2)],{cwd:root,stdio:'inherit'});

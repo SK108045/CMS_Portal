@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+**/node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+.tools/
+backend/wwwroot/
+publish/
+backend/appsettings.Development.json
+backend/appsettings.Production.json
+.env
+storage/**
+!storage/**/
+!storage/**/.gitkeep
+*.log
+*.tsbuildinfo

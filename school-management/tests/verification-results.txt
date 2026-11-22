@@ -1,0 +1,89 @@
+Mission School verification — Ubuntu — 22 November 2026
+Stack: React/TypeScript/Vite; ASP.NET Core 8; EF Core/Npgsql; PostgreSQL 16.15
+
+BACKEND BUILD
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  School.Api -> /home/sk10/Documents/Budget_Management/school-management/backend/bin/Debug/net8.0/School.Api.dll
+  School.Tests -> /home/sk10/Documents/Budget_Management/school-management/tests/School.Tests/bin/Debug/net8.0/School.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:03.57
+
+
+BACKEND TESTS
+  Determining projects to restore...
+  Restored /home/sk10/Documents/Budget_Management/school-management/backend/School.Api.csproj (in 516 ms).
+  1 of 2 projects are up-to-date for restore.
+  School.Api -> /home/sk10/Documents/Budget_Management/school-management/backend/bin/Debug/net8.0/School.Api.dll
+  School.Tests -> /home/sk10/Documents/Budget_Management/school-management/tests/School.Tests/bin/Debug/net8.0/School.Tests.dll
+Test run for /home/sk10/Documents/Budget_Management/school-management/tests/School.Tests/bin/Debug/net8.0/School.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.2 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    15, Skipped:     0, Total:    15, Duration: 82 ms - School.Tests.dll (net8.0)
+
+
+LIVE POSTGRESQL ACCEPTANCE
+PASS 1: Admin creates department and worker; worker logs in
+PASS 2: Worker sees department budget
+PASS 3: Approval commits funds without spending
+PASS 4: Receipt, invoice, partial/final payment, evidence and audit; final payment releases unused approval
+PASS 5: Rejected request reserves no funds
+PASS 6: Imprest spending, receipt and replenishment
+PASS 7: Financial donation recorded
+PASS 8: Non-cash donation enters inventory
+PASS 9: Stock receipt, issue and movement-derived quantity
+PASS 10: Asset maintenance and lifetime cost
+PASS 11: Filtered report and matching CSV
+PASS 12: Admin endpoints and cross-department document/record access rejected
+PASS: Negative balance, excess stock issue and payment after completion rejected
+ALL LIVE ACCEPTANCE WORKFLOWS PASSED; run id 366a8f0d
+PASS: Cancellation releases an existing commitment
+PASS: Stock-to-asset conversion decrements stock and creates asset atomically
+PASS: Client navigation graphs and department spoofing cannot change budgets
+PASS: Unified filtered transaction report and CSV agree
+PASS: Department funding request, Admin approval and single replenishment
+PASS: Withdrawal settlement avoids double cash debit; unused cash return; excess settlement rejected
+
+
+BROWSER TESTS
+
+Running 3 tests using 1 worker
+
+  ✓  1 tests/browser/portal.spec.ts:2:1 › Admin portal: live dashboard, forms, all pages and reports (12.4s)
+  ✓  2 tests/browser/portal.spec.ts:63:1 › Department portal creates and submits a real request (4.1s)
+  ✓  3 tests/browser/portal.spec.ts:101:1 › Petty cash funding request is approved through the browser (3.3s)
+
+  3 passed (26.4s)
+
+
+WINDOWS SELF-CONTAINED PUBLISH
+
+> mission-school-finance@1.0.0 build
+> tsc -b && vite build
+
+vite v6.4.6 building for production...
+transforming...
+✓ 1585 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.42 kB │ gzip:  0.30 kB
+dist/assets/index-DGMtHgSz.css   18.99 kB │ gzip:  5.11 kB
+dist/assets/index-DyxAlnaR.js   203.11 kB │ gzip: 62.74 kB
+✓ built in 2.63s
+  Determining projects to restore...
+  Restored /home/sk10/Documents/Budget_Management/school-management/backend/School.Api.csproj (in 518 ms).
+  School.Api -> /home/sk10/Documents/Budget_Management/school-management/backend/bin/Release/net8.0/win-x64/School.Api.dll
+  School.Api -> /home/sk10/Documents/Budget_Management/school-management/publish/windows/
+
+
+PRODUCTION HOSTING
+ASP.NET-served React build tested at http://127.0.0.1:5000, including real login and clean PostgreSQL demo dashboard (budget KES 12,400,000). No page errors. Screenshot: tests/dashboard.png.
+
+Limits: Windows executable publish was verified; execution on Windows/LAN was not performed on this Ubuntu machine. See README Current boundaries.
