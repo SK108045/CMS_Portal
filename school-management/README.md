@@ -49,6 +49,18 @@ CREATE DATABASE mission_school OWNER mission_app;
 
 Choose a password; it is never stored in this repository. Alternatively use `database/setup.sql` through an administrator psql session. If you cannot administer the system cluster, `scripts/dev-postgres.sh` creates an optional isolated development cluster on port 55432 under your home directory, with password authentication. It asks you to choose its password. Never expose a development cluster to the LAN.
 
+## Local day-to-day development
+
+After the initial database/setup is complete, normal development is intentionally one server command. ASP.NET Debug builds automatically rebuild the React/Vite frontend and copy it into `backend/wwwroot` before starting.
+
+```bash
+# after pulling changes
+cd school-management/backend
+dotnet run
+```
+
+Open **http://127.0.0.1:5000**. You do not need to manually run `npm run build`, copy `dist`, or maintain a second Vite terminal just to see pulled frontend changes. If `frontend/node_modules` does not exist, the first run automatically performs `npm ci`.
+
 ## Ubuntu development
 
 From `school-management/`:
