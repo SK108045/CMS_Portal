@@ -30,6 +30,14 @@ export function VisualSummary({
             ? "Each item uses its own unit; quantities are not added across different items."
             : summary.records + " records in this view."
         }
+        insight={
+          <p>
+            This comparison is built from <strong>{summary.records}</strong>{" "}
+            authorised records in the current view. Longer bars represent
+            larger values, making it easier to see which categories or records
+            are carrying most of the activity.
+          </p>
+        }
       >
         <BarChart
           points={summary.comparison}
@@ -40,7 +48,18 @@ export function VisualSummary({
           limit={5}
         />
       </ChartCard>
-      <ChartCard eyebrow="AT A GLANCE" title={summary.distributionTitle}>
+      <ChartCard
+        eyebrow="AT A GLANCE"
+        title={summary.distributionTitle}
+        insight={
+          <p>
+            This view shows how the current records are split across their main
+            classifications. The largest slice represents the dominant group,
+            while smaller slices highlight less common activity that may still
+            deserve attention.
+          </p>
+        }
+      >
         <DonutChart
           points={summary.distribution}
           unit={summary.distributionUnit}
