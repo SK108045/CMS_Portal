@@ -3201,3 +3201,301 @@ header {
     font-size: 12px;
   }
 }
+
+
+/* Premium analytics motion system */
+.chart-card-enter {
+  animation: chartCardEnter 560ms cubic-bezier(.2,.8,.2,1) both;
+  will-change: transform, opacity;
+}
+.chart-card-enter:hover {
+  border-color: #c8d6c7;
+  box-shadow: 0 10px 28px #1739190b;
+}
+.chart-card-enter .chart-heading {
+  animation: chartHeadingEnter 520ms 80ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.chart-bar-enter {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: chartBarGrow 760ms cubic-bezier(.16,1,.3,1) both;
+  transition:
+    opacity 180ms ease,
+    filter 180ms ease;
+}
+.chart-bar-group:hover .chart-bar-enter,
+.chart-bar-group:focus-visible .chart-bar-enter {
+  filter: saturate(1.12) brightness(1.02);
+}
+
+.donut-segment-enter {
+  stroke-dashoffset: var(--donut-final);
+  animation: donutSweepIn 900ms cubic-bezier(.16,1,.3,1) both;
+  transition:
+    stroke-width 180ms ease,
+    opacity 180ms ease,
+    filter 180ms ease;
+}
+.donut-segment:hover {
+  filter: drop-shadow(0 3px 5px #17391925);
+}
+.chart-legend-item {
+  opacity: 0;
+  transform: translateX(8px);
+  animation: chartLegendEnter 420ms cubic-bezier(.2,.8,.2,1) both;
+  transition:
+    background 160ms ease,
+    transform 160ms ease;
+}
+.chart-legend-item:hover,
+.chart-legend-item.active {
+  transform: translateX(3px);
+}
+.donut-center {
+  animation: donutCenterEnter 620ms 320ms cubic-bezier(.16,1,.3,1) both;
+}
+.donut-center strong {
+  transition:
+    transform 180ms ease,
+    color 180ms ease;
+}
+.donut-stage:has(.donut-segment:hover) .donut-center strong {
+  transform: scale(1.06);
+}
+
+.trend-area-enter {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: trendAreaRise 850ms 160ms cubic-bezier(.16,1,.3,1) both;
+}
+.trend-line-enter {
+  stroke-dashoffset: 1;
+  animation: trendLineDraw 1100ms 180ms cubic-bezier(.25,.8,.25,1) forwards;
+  filter: drop-shadow(0 2px 3px #347a6120);
+}
+.trend-income-enter {
+  opacity: 0;
+  animation:
+    trendIncomeEnter 720ms 520ms ease-out forwards,
+    trendDashDrift 8s 1.2s linear infinite;
+}
+.trend-point-enter {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: trendPointPop 420ms cubic-bezier(.16,1.4,.3,1) forwards;
+  transition:
+    r 150ms ease,
+    filter 150ms ease;
+}
+.trend-month:hover .trend-point-enter,
+.trend-month:focus-visible .trend-point-enter {
+  filter: drop-shadow(0 2px 4px #17391935);
+}
+.trend-focus-line {
+  transform-origin: top;
+  animation: trendFocusLine 180ms ease-out both;
+}
+.trend-live-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: trendLivePulse 2s ease-out infinite;
+  pointer-events: none;
+}
+.trend-tooltip strong,
+.trend-tooltip b,
+.chart-readout strong {
+  animation: chartValueReveal 220ms ease-out both;
+}
+.chart-readout,
+.trend-tooltip {
+  transition:
+    background 180ms ease,
+    color 180ms ease;
+}
+.chart-readout:has(strong),
+.trend-tooltip:has(strong) {
+  background: linear-gradient(90deg, #f5f8f1 0%, transparent 72%);
+}
+.chart-series-key > span {
+  transition:
+    transform 160ms ease,
+    opacity 160ms ease;
+}
+.chart-series-key > span:hover {
+  transform: translateY(-1px);
+}
+
+@keyframes chartCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(.992);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes chartHeadingEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes chartBarGrow {
+  from {
+    transform: scaleX(0);
+    opacity: .35;
+  }
+  65% {
+    opacity: 1;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+@keyframes donutSweepIn {
+  from {
+    stroke-dashoffset: var(--donut-start);
+    opacity: .22;
+  }
+  45% {
+    opacity: 1;
+  }
+  to {
+    stroke-dashoffset: var(--donut-final);
+    opacity: 1;
+  }
+}
+@keyframes chartLegendEnter {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes donutCenterEnter {
+  from {
+    opacity: 0;
+    transform: scale(.82);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes trendAreaRise {
+  from {
+    opacity: 0;
+    transform: scaleY(.08);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+@keyframes trendLineDraw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes trendIncomeEnter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes trendDashDrift {
+  to {
+    stroke-dashoffset: -44;
+  }
+}
+@keyframes trendPointPop {
+  from {
+    opacity: 0;
+    transform: scale(.25);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes trendFocusLine {
+  from {
+    opacity: 0;
+    transform: scaleY(.25);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+@keyframes trendLivePulse {
+  0% {
+    opacity: .75;
+    transform: scale(.7);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(2.15);
+  }
+}
+@keyframes chartValueReveal {
+  from {
+    opacity: .45;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-card-enter,
+  .chart-card-enter .chart-heading,
+  .chart-bar-enter,
+  .donut-segment-enter,
+  .chart-legend-item,
+  .donut-center,
+  .trend-area-enter,
+  .trend-line-enter,
+  .trend-income-enter,
+  .trend-point-enter,
+  .trend-focus-line,
+  .trend-live-pulse,
+  .trend-tooltip strong,
+  .trend-tooltip b,
+  .chart-readout strong {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .trend-line-enter {
+    stroke-dashoffset: 0 !important;
+  }
+  .donut-segment-enter {
+    stroke-dashoffset: var(--donut-final) !important;
+  }
+}
