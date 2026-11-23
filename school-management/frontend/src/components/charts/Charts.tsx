@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { Maximize2 } from "lucide-react";
 import { kes } from "../../api";
+import { Modal } from "../Modal";
 export type Point = {
   key: string;
   label: string;
@@ -64,18 +66,52 @@ export function ChartCard({
   action?: React.ReactNode;
   className?: string;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   return (
-    <section className={"chart-card chart-card-enter " + className}>
-      <div className="chart-heading">
-        <div>
-          {eyebrow && <span className="chart-eyebrow">{eyebrow}</span>}
-          <h2>{title}</h2>
-          {subtitle && <p>{subtitle}</p>}
+    <>
+      <section className={"chart-card chart-card-enter " + className}>
+        <div className="chart-heading">
+          <div>
+            {eyebrow && <span className="chart-eyebrow">{eyebrow}</span>}
+            <h2>{title}</h2>
+            {subtitle && <p>{subtitle}</p>}
+          </div>
+          <div className="chart-heading-actions">
+            {action}
+            <button
+              type="button"
+              className="chart-expand-button"
+              onClick={() => setExpanded(true)}
+              aria-label={`Expand ${title} chart`}
+              title="Expand chart"
+            >
+              <Maximize2 size={18} />
+            </button>
+          </div>
         </div>
-        {action}
-      </div>
-      {children}
-    </section>
+        {children}
+      </section>
+
+      {expanded && (
+        <Modal
+          title={title}
+          onClose={() => setExpanded(false)}
+          className="analytics-focus-modal"
+        >
+          <div className="analytics-focus-shell">
+            <div className="analytics-focus-intro">
+              <div>
+                {eyebrow && <span className="chart-eyebrow">{eyebrow}</span>}
+                {subtitle && <p>{subtitle}</p>}
+              </div>
+              <span className="analytics-focus-badge">EXPANDED ANALYTICS</span>
+            </div>
+            <div className="analytics-focus-visual">{children}</div>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }
 function DataValues({
