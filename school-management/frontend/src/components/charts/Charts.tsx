@@ -115,10 +115,10 @@ export function ChartCard({
             </div>
             <div className="analytics-focus-visual">{children}</div>
             {insight && (
-              <aside className="analytics-focus-insight">
+              <div className="analytics-focus-insight" role="note">
                 <span>WHAT THIS TELLS YOU</span>
                 <div>{insight}</div>
-              </aside>
+              </div>
             )}
           </div>
         </Modal>
