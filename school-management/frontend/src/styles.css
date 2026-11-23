@@ -2581,3 +2581,623 @@ header {
     width: 100%;
   }
 }
+
+
+/* Readability pass: larger, higher-contrast UI text for school staff. */
+@media screen {
+  :root {
+    font-size: 16px;
+    color: #1f342c;
+  }
+
+  body {
+    font-size: 16px;
+    line-height: 1.55;
+    color: #1f342c;
+  }
+
+  p {
+    font-size: 14.5px;
+    line-height: 1.65;
+    color: #56685f;
+  }
+
+  small {
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+
+  .muted {
+    color: #65756d;
+  }
+
+  .eyebrow {
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 1.45px;
+    color: #5e7067;
+  }
+
+  h1 {
+    font-size: 32px;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-size: 20px;
+    line-height: 1.3;
+  }
+
+  h3 {
+    font-size: 16px;
+    line-height: 1.4;
+  }
+
+  button,
+  .button {
+    font-size: 14px;
+    font-weight: 700;
+    padding: 11px 16px;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 15px;
+    color: #1f342c;
+    border-color: #bfcac2;
+    min-height: 44px;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #7b8982;
+    opacity: 1;
+  }
+
+  label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #344b41;
+    line-height: 1.55;
+  }
+
+  aside {
+    color: #edf4ef;
+  }
+
+  .brand {
+    font-size: 15px;
+  }
+
+  .brand small {
+    font-size: 10px;
+    color: #c1d3c8;
+  }
+
+  .portal-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #b5c9bd;
+  }
+
+  nav a {
+    font-size: 14px;
+    color: #d0ddd5;
+    padding: 11px 14px;
+  }
+
+  .sidebar-bottom strong {
+    font-size: 13px;
+    color: #fff;
+  }
+
+  .sidebar-bottom small {
+    font-size: 11px;
+    color: #bed0c6;
+  }
+
+  header {
+    font-size: 13px;
+    color: #5e7067;
+  }
+
+  header strong {
+    color: #29463a;
+    font-weight: 700;
+  }
+
+  footer {
+    font-size: 12px;
+    color: #6f7e76;
+  }
+
+  .welcome h1 {
+    font-size: 34px;
+  }
+
+  .welcome p,
+  .page-heading p {
+    font-size: 14.5px;
+    color: #5d6e65;
+  }
+
+  .live-data {
+    font-size: 12.5px;
+    color: #58735f;
+  }
+
+  .metric-top {
+    font-size: 14px;
+    color: #56675f;
+    font-weight: 700;
+  }
+
+  .metric strong {
+    font-size: 29px;
+    color: #1f392e;
+  }
+
+  .metric small {
+    font-size: 12px;
+    color: #66766e;
+  }
+
+  .metric-3 strong {
+    color: #fff;
+  }
+
+  .metric-3 .metric-top,
+  .metric-3 small {
+    color: #e1eadf;
+  }
+
+  .quick-stats span {
+    font-size: 12.5px;
+    color: #5e6f66;
+  }
+
+  .quick-stats strong,
+  .analytics-stats strong {
+    font-size: 19px;
+  }
+
+  .section-heading p {
+    font-size: 13px;
+    color: #63746b;
+  }
+
+  .section-heading .link,
+  .link {
+    font-size: 13px;
+  }
+
+  .budget-line > div:first-child {
+    font-size: 13.5px;
+  }
+
+  .budget-line span {
+    font-size: 12.5px;
+    color: #596b61;
+  }
+
+  .budget-line small {
+    font-size: 11.5px;
+    color: #6f7e76;
+  }
+
+  .legend {
+    font-size: 11.5px;
+    color: #60745d;
+  }
+
+  .attention strong,
+  .attention-list .attention strong {
+    font-size: 14px;
+  }
+
+  .attention span,
+  .attention-list .attention span {
+    font-size: 12.5px;
+    color: #65735f;
+  }
+
+  .trend,
+  .trend strong {
+    font-size: 12px;
+  }
+
+  .recent {
+    font-size: 13.5px;
+  }
+
+  .recent small {
+    font-size: 12px;
+    color: #6e7d74;
+  }
+
+  .request-number {
+    font-size: 11.5px;
+    color: #66785d;
+  }
+
+  .badge {
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 5px 9px;
+  }
+
+  .table-tools input,
+  .table-tools select {
+    font-size: 14px;
+  }
+
+  .table-tools > span {
+    font-size: 12.5px;
+    color: #66766e;
+  }
+
+  th {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #52645a;
+    padding: 11px 15px;
+  }
+
+  th button {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #4f6257;
+  }
+
+  td {
+    font-size: 14px;
+    color: #344c40;
+    padding: 17px 15px;
+  }
+
+  .pagination span,
+  .pagination button {
+    font-size: 12.5px;
+  }
+
+  .evidence-missing {
+    font-size: 12.5px;
+    color: #8a5d2f;
+    font-weight: 600;
+  }
+
+  .empty,
+  .loading {
+    color: #5f7167;
+    font-size: 14px;
+  }
+
+  .empty p {
+    font-size: 14px;
+  }
+
+  .error {
+    font-size: 14px;
+    color: #933d2d;
+  }
+
+  .error button {
+    font-size: 12.5px;
+  }
+
+  .toast {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .modal-head h2 {
+    font-size: 20px;
+  }
+
+  .detail-grid small {
+    font-size: 12px;
+    color: #65766c;
+  }
+
+  .detail-grid strong {
+    font-size: 14px;
+    font-weight: 600;
+    color: #263f34;
+  }
+
+  .workflow p {
+    font-size: 13.5px;
+  }
+
+  .upload input,
+  .upload button {
+    font-size: 13.5px;
+  }
+
+  .document-link {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .history strong {
+    font-size: 13.5px;
+  }
+
+  .history p,
+  .history small {
+    font-size: 12.5px;
+  }
+
+  .history small {
+    color: #66776d;
+  }
+
+  .history pre {
+    font-size: 12px;
+  }
+
+  .report-filters input,
+  .report-filters select {
+    font-size: 14px;
+  }
+
+  .login-story .eyebrow {
+    font-size: 11.5px;
+    color: #c7d8b3;
+  }
+
+  .login-story p {
+    font-size: 15px;
+    color: #c8d8ca;
+  }
+
+  .login-story > small {
+    font-size: 12px;
+    color: #b6cbbd;
+  }
+
+  .login-form p {
+    font-size: 14px;
+  }
+
+  .login-form > .muted {
+    font-size: 12.5px;
+  }
+
+  .chart-eyebrow {
+    font-size: 11px;
+    color: #66775f;
+  }
+
+  .chart-heading h2 {
+    font-size: 20px;
+  }
+
+  .chart-heading p {
+    font-size: 13px;
+    color: #657368;
+  }
+
+  .chart-tick {
+    font-size: 12.5px;
+    fill: #5f7065;
+  }
+
+  .chart-category {
+    font-size: 13.5px;
+    fill: #3f5948;
+    font-weight: 600;
+  }
+
+  .chart-series-key,
+  .chart-year {
+    font-size: 12px;
+    color: #62745f;
+  }
+
+  .chart-series-key small {
+    font-size: 11px;
+  }
+
+  .chart-toggle button {
+    font-size: 11.5px;
+  }
+
+  .trend-tooltip,
+  .chart-readout {
+    font-size: 12px;
+    color: #64756a;
+  }
+
+  .chart-data summary {
+    font-size: 12px;
+    color: #61715f;
+  }
+
+  .chart-data td,
+  .chart-data th {
+    font-size: 12px;
+  }
+
+  .donut-center > span {
+    font-size: 11px;
+    color: #5f725d;
+  }
+
+  .donut-center strong {
+    font-size: 27px;
+  }
+
+  .donut-center > small {
+    font-size: 10.5px;
+    color: #667762;
+  }
+
+  .chart-legend-list span {
+    font-size: 12px;
+    color: #4f6652;
+  }
+
+  .chart-legend-list strong {
+    font-size: 13px;
+  }
+
+  .chart-legend-list small {
+    font-size: 11.5px;
+    color: #667d68;
+  }
+
+  .chart-empty,
+  .chart-clear p,
+  .analytics-footnote {
+    font-size: 12px;
+    color: #667961;
+  }
+
+  .chart-empty strong,
+  .chart-clear strong {
+    font-size: 14px;
+  }
+
+  .chart-text-link,
+  .chart-warning {
+    font-size: 12.5px;
+  }
+
+  .request-preview .request-number {
+    font-size: 11px;
+  }
+
+  .request-preview > strong {
+    font-size: 15px;
+    color: #2f4f38;
+  }
+
+  .request-preview > small {
+    font-size: 12.5px;
+    color: #637268;
+  }
+
+  .approval-heading h2 {
+    font-size: 26px;
+    color: #153b2c;
+  }
+
+  .approval-heading p {
+    font-size: 14px;
+    color: #4f6559;
+  }
+
+  .approval-count {
+    font-size: 16px;
+  }
+
+  .approval-summary small {
+    font-size: 12.5px;
+    color: #52685c;
+  }
+
+  .approval-summary strong {
+    font-size: 22px;
+    color: #153b2c;
+  }
+
+  .approval-all {
+    font-size: 13.5px;
+    font-weight: 700;
+  }
+
+  .approval-request-meta {
+    font-size: 12px;
+    color: #596d61;
+  }
+
+  .approval-request h3 {
+    font-size: 19px;
+    color: #173a2d;
+  }
+
+  .approval-request p {
+    font-size: 14px;
+    color: #50665a;
+  }
+
+  .approval-request small {
+    font-size: 12.5px;
+    color: #586b60;
+  }
+
+  .approval-request small.approval-review-note {
+    color: #805719;
+    font-weight: 700;
+  }
+
+  .approval-request-decision > strong {
+    font-size: 22px;
+  }
+
+  .approve-button {
+    font-size: 15px;
+    font-weight: 800;
+    min-width: 170px;
+    padding: 12px 24px;
+  }
+
+  .approval-secondary button {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #4e665a;
+  }
+
+  .approval-footer {
+    font-size: 12.5px;
+    color: #5e6f65;
+  }
+
+  .approval-empty,
+  .approval-empty span {
+    font-size: 13.5px;
+  }
+
+  .approval-details summary {
+    font-size: 14px;
+  }
+
+  .table-action-cell .primary {
+    font-size: 13px;
+    padding: 9px 12px;
+  }
+}
+
+@media screen and (max-width: 760px) {
+  :root,
+  body {
+    font-size: 15px;
+  }
+
+  nav a {
+    font-size: 14px;
+  }
+
+  .welcome h1 {
+    font-size: 28px;
+  }
+
+  .approval-heading h2 {
+    font-size: 22px;
+  }
+
+  .approval-request h3 {
+    font-size: 17px;
+  }
+
+  td {
+    font-size: 13.5px;
+  }
+
+  th,
+  th button {
+    font-size: 12px;
+  }
+}
