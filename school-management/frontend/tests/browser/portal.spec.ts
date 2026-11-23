@@ -11,7 +11,9 @@ test("Admin portal: live dashboard, forms, all pages and reports", async ({
   await page.getByLabel("Password", { exact: true }).fill("Admin123!");
   await page.getByRole("button", { name: "Sign in →" }).click();
   await expect(
-    page.getByRole("heading", { name: "Every shilling, accounted for." }),
+    page.getByRole("heading", {
+      name: /Every shilling, accounted for\.|Approve purchase requests/,
+    }),
   ).toBeVisible();
   await expect(page.getByText("Total budget", { exact: true })).toBeVisible();
   await page.screenshot({ path: "../tests/dashboard.png", fullPage: true });
@@ -70,7 +72,9 @@ test("Department portal creates and submits a real request", async ({
   await page.getByLabel("Password", { exact: true }).fill("SchoolDemo123!");
   await page.getByRole("button", { name: "Sign in →" }).click();
   await expect(
-    page.getByRole("heading", { name: "Every shilling, accounted for." }),
+    page.getByRole("heading", {
+      name: /Every shilling, accounted for\.|Approve purchase requests/,
+    }),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Users", exact: true }),
@@ -110,7 +114,9 @@ test("Petty cash funding request is approved through the browser", async ({
   await page.getByLabel("Password", { exact: true }).fill("SchoolDemo123!");
   await page.getByRole("button", { name: "Sign in →" }).click();
   await expect(
-    page.getByRole("heading", { name: "Every shilling, accounted for." }),
+    page.getByRole("heading", {
+      name: /Every shilling, accounted for\.|Approve purchase requests/,
+    }),
   ).toBeVisible();
   await page.goto("/#petty-requests");
   await page.getByRole("button", { name: "+ New record" }).click();
@@ -135,7 +141,9 @@ test("Petty cash funding request is approved through the browser", async ({
   await page.getByLabel("Password", { exact: true }).fill("Admin123!");
   await page.getByRole("button", { name: "Sign in →" }).click();
   await expect(
-    page.getByRole("heading", { name: "Every shilling, accounted for." }),
+    page.getByRole("heading", {
+      name: /Every shilling, accounted for\.|Approve purchase requests/,
+    }),
   ).toBeVisible();
   await page.goto("/#petty-requests");
   await page.getByPlaceholder("Search records…").fill(purpose);

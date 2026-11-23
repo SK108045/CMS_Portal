@@ -34,12 +34,14 @@ export function Table({
   columns,
   lookups,
   onOpen,
+  renderActions,
   report = false,
 }: {
   rows: Row[];
   columns: string[];
   lookups: Record<string, Row[]>;
   onOpen?: (row: Row) => void;
+  renderActions?: (row: Row) => React.ReactNode;
   report?: boolean;
 }) {
   const [q, setQ] = useState("");
@@ -149,7 +151,9 @@ export function Table({
                   </button>
                 </th>
               ))}
-              {onOpen && <th />}
+              {(onOpen || renderActions) && (
+                <th className="table-action-cell">Actions</th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -172,11 +176,14 @@ export function Table({
                     )}
                   </td>
                 ))}
-                {onOpen && (
-                  <td>
-                    <button className="link" onClick={() => onOpen(r)}>
-                      Open ↗
-                    </button>
+                {(onOpen || renderActions) && (
+                  <td className="table-action-cell">
+                    {renderActions?.(r)}
+                    {onOpen && (
+                      <button className="link" onClick={() => onOpen(r)}>
+                        Open ↗
+                      </button>
+                    )}
                   </td>
                 )}
               </tr>

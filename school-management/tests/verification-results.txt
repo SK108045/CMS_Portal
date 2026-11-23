@@ -259,3 +259,34 @@ permissions-windows-publish.log
   School.Api -> /home/sk10/Documents/Budget_Management/school-management/publish/windows/
 
 Final review: zero RequireAdmin() calls remain in current backend; no frontend role === ADMIN authorization checks remain. Uploaded files, local settings, database backup, cookies and generated builds are excluded from Git.
+
+ADMIN HOME APPROVAL INBOX — 23 November 2026
+Story: Admin Home -> permission-protected approval queue -> existing serializable
+request decision endpoint -> PostgreSQL commitment/audit -> refreshed inbox and totals.
+
+PASS: dotnet build MissionSchool.sln — 0 warnings, 0 errors.
+PASS: dotnet test — 55 passed, 0 failed.
+PASS: npm run build — TypeScript and Vite production build.
+PASS: Playwright — 26 passed, 0 failed (13 approval-specific checks added).
+  Home displays decision cards before charts; direct approval is visible above the fold.
+  One click approves an ordinary submitted request; committed increases and spent stays zero.
+  Supplier selection and adjusted approval amount are functional.
+  Return/reject require reasons and reserve no money.
+  Self-approval and budget overrides require reasons and create audit entries.
+  Drafts do not enter the pending queue until explicitly submitted from the request table.
+  All five non-approver roles lack approval controls; queue API returns 403.
+  A stale quick approval sends no synthetic override reason: changed budget availability
+  causes rejection and refresh, followed by explicit reason entry before override.
+  Existing role, session invalidation, charts, reports and petty-cash browser checks pass.
+PASS: Live PostgreSQL permissions_acceptance.py — all role/scope/financial checks.
+PASS: Live PostgreSQL acceptance.py — all 12 workflows and additional financial invariants.
+  Live suites run against mission_permissions_test, separately from mission_school_demo.
+  PostgreSQL was restarted before successful live verification; suites run sequentially
+  to avoid serializable transaction contention between unrelated test fixtures.
+PASS: dotnet publish -c Release -r win-x64 --self-contained true.
+PASS: Desktop and 390px mobile screenshots inspected; no horizontal mobile overflow.
+PASS: Configured demo on http://127.0.0.1:5000 serves the updated production SPA/API.
+  Read-only demo queue check: HTTP 200, 1 pending request, 7 drafts. Demo records preserved.
+  tests/dashboard.png shows the real demo Admin home, without acceptance fixtures.
+No schema changes or new migration required. Existing permissions, protected documents,
+financial transactions, audit history and session invalidation retained.

@@ -28,6 +28,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { Records } from "./pages/Records";
 import { Reports } from "./pages/Reports";
 import { Modal } from "./components/Modal";
+import { ApprovalQueue } from "./components/ApprovalQueue";
 const nav = [
   ["dashboard", "Dashboard", LayoutDashboard],
   ["departments", "Departments", Building2],
@@ -285,7 +286,23 @@ export default function App() {
         </header>
         <main className="content">
           {current === "dashboard" ? (
-            <Dashboard go={go} lookups={lookups} user={user} />
+            <Dashboard
+              go={go}
+              lookups={lookups}
+              user={user}
+              notify={setToast}
+            />
+          ) : current === "approvals" && has(user, "requests.approve") ? (
+            <>
+              <div className="page-heading">
+                <div>
+                  <span className="eyebrow">PURCHASE DECISIONS</span>
+                  <h1>Approval inbox</h1>
+                  <p>Approve, return or reject submitted requests directly.</p>
+                </div>
+              </div>
+              <ApprovalQueue notify={setToast} onChanged={refresh} />
+            </>
           ) : current === "reports" ? (
             <Reports key={path} lookups={lookups} user={user} />
           ) : current === "settings" ? (
@@ -293,14 +310,7 @@ export default function App() {
           ) : (
             <Records
               key={path}
-              resource={
-                current === "approvals" && has(user, "requests.approve")
-                  ? "requests"
-                  : current
-              }
-              approvalQueue={
-                current === "approvals" && has(user, "requests.approve")
-              }
+              resource={current}
               lookups={lookups}
               user={user}
               refresh={refresh}

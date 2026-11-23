@@ -9,6 +9,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { api, Row, kes } from "../api";
+import { ApprovalQueue } from "../components/ApprovalQueue";
 import {
   BarChart,
   ChartCard,
@@ -20,10 +21,12 @@ export function Dashboard({
   go,
   lookups,
   user,
+  notify,
 }: {
   go: (s: string) => void;
   lookups: Record<string, Row[]>;
   user: Row;
+  notify: (message: string) => void;
 }) {
   const [data, setData] = useState<Row>();
   const [error, setError] = useState("");
@@ -50,6 +53,7 @@ export function Dashboard({
   const canBudget = read(user, "budgets");
   const canIncome = read(user, "income");
   const stock = data.operationalCharts as ChartSummary | undefined;
+  const canApprove = has(user, "requests.approve");
   const cards = [
     ["Total budget", data.budget, "budgets", Wallet],
     ["Committed", data.committed, "requests", ClipboardCheck],
@@ -78,18 +82,37 @@ export function Dashboard({
         </div>
         <div>
           <span className="eyebrow">STEWARDSHIP / FINANCIAL OVERVIEW</span>
-          <h1>Every shilling, accounted for.</h1>
-          <p>Your school’s finances, clearly in view.</p>
+          <h1>
+            {canApprove
+              ? "Approve purchase requests"
+              : "Every shilling, accounted for."}
+          </h1>
+          <p>
+            {canApprove
+              ? "Your approval inbox first. The school’s financial position below."
+              : "Your school’s finances, clearly in view."}
+          </p>
         </div>
         <div className="welcome-actions">
           <span className="live-data">
             <i /> Live school records
           </span>
-          <button className="primary" onClick={() => go("reports")}>
-            View reports <ArrowUpRight size={16} />
+          <button
+            className="primary"
+            onClick={() => go(canApprove ? "approvals" : "reports")}
+          >
+            {canApprove ? "Approval inbox" : "View reports"}{" "}
+            <ArrowUpRight size={16} />
           </button>
         </div>
       </div>
+      {canApprove && (
+        <ApprovalQueue
+          compact
+          notify={notify}
+          onChanged={async () => setData(await api("insights/dashboard"))}
+        />
+      )}
       <div className="cards">
         {canBudget &&
           cards.map(([name, n, path, Icon], i) => (
@@ -215,7 +238,11 @@ export function Dashboard({
       </div>
       <div className="quick-stats analytics-stats">
         {[
-          ["Awaiting approval", data.pending, "requests"],
+          [
+            "Awaiting approval",
+            data.pending,
+            canApprove ? "approvals" : "requests",
+          ],
           [
             "Evidence needed",
             data.missingEvidence,
@@ -226,7 +253,7 @@ export function Dashboard({
           ["Other income", kes(data.otherIncome), "income"],
         ]
           .filter(([, , path]) =>
-            path === "requests"
+            path === "requests" || path === "approvals"
               ? read(user, "requests")
               : String(path).startsWith("reports")
                 ? financial
@@ -333,7 +360,10 @@ export function Dashboard({
               </button>
             )}
             {data.pending > 0 && (
-              <button className="attention" onClick={() => go("requests")}>
+              <button
+                className="attention"
+                onClick={() => go(canApprove ? "approvals" : "requests")}
+              >
                 <strong>{data.pending} requests awaiting a decision</strong>
                 <span>Review needs and budget impact ↗</span>
               </button>

@@ -9,7 +9,9 @@ async function login(
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in →" }).click();
   await expect(
-    page.getByRole("heading", { name: "Every shilling, accounted for." }),
+    page.getByRole("heading", {
+      name: /Every shilling, accounted for\.|Approve purchase requests/,
+    }),
   ).toBeVisible();
 }
 test("Dashboard charts render actual values and drill into records", async ({
@@ -114,7 +116,9 @@ test("Department chart endpoints stay scoped to the signed-in department", async
     ).toBe(403);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
-    page.getByRole("heading", { name: "Every shilling, accounted for." }),
+    page.getByRole("heading", {
+      name: /Every shilling, accounted for\.|Approve purchase requests/,
+    }),
   ).toBeVisible();
   expect(
     await page.evaluate(

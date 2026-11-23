@@ -6,7 +6,9 @@ async function login(page: Page, email: string, pw = password) {
   await page.getByLabel("Password", { exact: true }).fill(pw);
   await page.getByRole("button", { name: "Sign in →" }).click();
   await expect(
-    page.getByRole("heading", { name: "Every shilling, accounted for." }),
+    page.getByRole("heading", {
+      name: /Every shilling, accounted for\.|Approve purchase requests/,
+    }),
   ).toBeVisible();
   return (await page.request.get("/api/auth/me")).json();
 }
@@ -275,7 +277,9 @@ test("A revoked role session clears stale UI and can sign in with fresh permissi
   await worker.getByLabel("Password", { exact: true }).fill(body.password);
   await worker.getByRole("button", { name: "Sign in →" }).click();
   await expect(
-    worker.getByRole("heading", { name: "Every shilling, accounted for." }),
+    worker.getByRole("heading", {
+      name: /Every shilling, accounted for\.|Approve purchase requests/,
+    }),
   ).toBeVisible();
   await worker.goto("/#requests");
   await expect(

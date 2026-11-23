@@ -6,15 +6,14 @@ import { schemas } from "../schema";
 import { Table, label, value } from "../components/Table";
 import { Form } from "../components/Form";
 import { Modal } from "../components/Modal";
+import { ApprovalQueue } from "../components/ApprovalQueue";
 export function Records({
   resource,
   lookups,
   user,
   refresh,
   notify,
-  approvalQueue = false,
 }: {
-  approvalQueue?: boolean;
   resource: string;
   lookups: Record<string, Row[]>;
   user: Row;
@@ -124,6 +123,8 @@ export function Records({
     setWorking(true);
     try {
       await fn();
+      if (resource === "requests")
+        window.dispatchEvent(new Event("requests-changed"));
       notify("Saved successfully");
       await load();
       await refresh();
@@ -151,7 +152,7 @@ export function Records({
       <div className="page-heading">
         <div>
           <span className="eyebrow">SCHOOL FINANCE</span>
-          <h1>{approvalQueue ? "Pending Approvals" : schema.title}</h1>
+          <h1>{schema.title}</h1>
           <p>{schema.description}</p>
         </div>
         <div className="actions">
@@ -196,23 +197,48 @@ export function Records({
           <button onClick={() => setError("")}>Dismiss</button>
         </div>
       )}
-      {!busy && !approvalQueue && (
-        <ModuleInsights resource={resource} rows={rows} />
+      {resource === "requests" && has(user, "requests.approve") && (
+        <ApprovalQueue
+          compact
+          notify={notify}
+          onChanged={async () => {
+            await load();
+            await refresh();
+          }}
+        />
       )}
+      {!busy && <ModuleInsights resource={resource} rows={rows} />}
       {busy ? (
         <div className="loading">Loading records…</div>
       ) : (
         <Table
-          rows={
-            approvalQueue
-              ? rows.filter((r) =>
-                  ["Submitted", "Under Review"].includes(r.status),
-                )
-              : rows
-          }
+          rows={rows}
           columns={columns}
           lookups={lookups}
           onOpen={(r) => setDetail(r)}
+          renderActions={
+            resource === "requests"
+              ? (r) =>
+                  r.allowedTransitions?.includes("Submitted") && (
+                    <button
+                      className="primary"
+                      disabled={working}
+                      onClick={() =>
+                        action(() =>
+                          api(`workflows/requests/${r.id}/status`, "POST", {
+                            status: "Submitted",
+                            comment: "Submitted for approval",
+                            amount: null,
+                            supplierId: null,
+                          }),
+                        )
+                      }
+                    >
+                      Submit for approval
+                    </button>
+                  )
+              : undefined
+          }
         />
       )}
       {editing && (

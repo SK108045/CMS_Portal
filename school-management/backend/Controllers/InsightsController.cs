@@ -33,6 +33,57 @@ public class InsightsController(
             .AsArray();
     }
 
+    [HttpGet("approval-queue")]
+    public async Task<object> ApprovalQueue()
+    {
+        access.RequirePermission("requests.approve");
+        var candidates = await db.Requests.AsNoTracking()
+            .Include(r => r.Department).Include(r => r.Budget).Include(r => r.Supplier).Include(r => r.Items)
+            .Where(r => r.Status == "Submitted" || r.Status == "Under Review" || r.Status == "Draft")
+            .OrderByDescending(r => r.Priority == "Urgent").ThenByDescending(r => r.Priority == "High")
+            .ThenBy(r => r.RequiredBy).ThenBy(r => r.CreatedAt).ToListAsync();
+        var users = await db.Users.AsNoTracking().Select(u => new { u.Id, u.Name }).ToDictionaryAsync(u => u.Id, u => u.Name);
+        var documents = await db.Documents.AsNoTracking().Where(d => d.Entity == "requests").ToListAsync();
+        var available = new Dictionary<int, decimal>();
+        var items = new List<object>();
+        decimal totalAmount = 0;
+        var drafts = 0;
+        foreach (var r in candidates)
+        {
+            if (!await access.CanReadRecord("requests", r)) continue;
+            if (r.Status == "Draft") { drafts++; continue; }
+            if (!available.ContainsKey(r.BudgetId)) available[r.BudgetId] = await ledger.Available(r.BudgetId);
+            var evidence = new List<object>();
+            foreach (var d in documents.Where(d => d.EntityId == r.Id))
+                if (await access.CanDocument("requests", r.Id, d.Kind)) evidence.Add(new { d.Id, d.Name, d.Kind });
+            var reasons = new List<string>();
+            if (r.Supplier is not { Active: true }) reasons.Add("Choose an active supplier.");
+            if (r.EstimatedAmount > available[r.BudgetId]) reasons.Add("A budget override reason is required.");
+            if (r.RequestedBy == access.UserId) reasons.Add("Your own request requires a self-approval reason.");
+            if (r.EstimatedAmount <= 0) reasons.Add("Enter a positive approved amount.");
+            items.Add(new
+            {
+                r.Id, r.Purpose, r.Description, r.Notes, r.DepartmentId,
+                Department = r.Department!.Name,
+                Requester = users.GetValueOrDefault(r.RequestedBy, "School staff"),
+                r.EstimatedAmount, r.BudgetId, Budget = r.Budget!.Name,
+                AvailableBudget = available[r.BudgetId], r.SupplierId, Supplier = r.Supplier?.Name,
+                r.Status, r.Priority, r.RequiredBy, r.CreatedAt,
+                SelfApproval = r.RequestedBy == access.UserId,
+                CanQuickApprove = reasons.Count == 0,
+                ReviewReasons = reasons,
+                Items = r.Items.Select(i => new { i.Description, i.Quantity, i.UnitPrice }),
+                Documents = evidence
+            });
+            totalAmount += r.EstimatedAmount;
+        }
+        return new
+        {
+            Items = items, TotalCount = items.Count, TotalAmount = totalAmount, DraftCount = drafts,
+            Suppliers = await db.Suppliers.AsNoTracking().Where(s => s.Active).OrderBy(s => s.Name).Select(s => new { s.Id, s.Name }).ToListAsync()
+        };
+    }
+
     [HttpGet("dashboard")]
     public async Task<object> Dashboard()
     {
