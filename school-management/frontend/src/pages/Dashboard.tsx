@@ -74,6 +74,13 @@ export function Dashboard({
       (a, b) =>
         b.value + b.secondary + b.tertiary - a.value - a.secondary - a.tertiary,
     );
+  const cashIncomeTotal = charts.income.distribution.reduce(
+    (sum, point) => sum + point.value,
+    0,
+  );
+  const leadingRequestStage = [...charts.requests.distribution].sort(
+    (a, b) => b.value - a.value,
+  )[0];
   return (
     <>
       <div className="welcome analytics-welcome">
@@ -166,6 +173,15 @@ export function Dashboard({
             eyebrow="CASH FLOW"
             title="The financial year, at a glance"
             subtitle="Actual payments, direct expenses and petty cash spending against cash income."
+            insight={
+              <p>
+                The chart compares money leaving the school with recorded cash
+                coming in month by month. Total recorded spending is{" "}
+                <strong>{kes(data.spent)}</strong>, while cash income shown in
+                this view totals <strong>{kes(cashIncomeTotal)}</strong>. Use
+                peaks to identify months that deserve a closer look.
+              </p>
+            }
           >
             <TrendChart
               spending={charts.spending.trend}
@@ -207,6 +223,14 @@ export function Dashboard({
             eyebrow="BUDGET POSITION"
             title="Reserved. Spent. Available."
             subtitle="Unpaid approvals stay separate from money spent."
+            insight={
+              <p>
+                <strong>{kes(data.spent)}</strong> has already been spent and{" "}
+                <strong>{kes(data.committed)}</strong> is reserved for approved
+                requests that are not fully paid yet. The school still has{" "}
+                <strong>{kes(data.remaining)}</strong> available after both.
+              </p>
+            }
           >
             <DonutChart
               points={charts.budgets.distribution}
@@ -284,6 +308,14 @@ export function Dashboard({
                 ? "Full allocation, split into spent, committed and available."
                 : "Compare actual spending and unpaid commitments."
             }
+            insight={
+              <p>
+                Each row shows how much a department has already used and how
+                much is tied up in approved purchases. Longer combined bars
+                mean more of that department's allocation is already spoken
+                for, making pressure points easy to spot.
+              </p>
+            }
             action={
               <div className="chart-toggle">
                 <button
@@ -317,6 +349,14 @@ export function Dashboard({
             eyebrow="SUPPORTING THE MISSION"
             title="Income & giving"
             subtitle="Cash donations, grants and other income. Non-cash gifts are tracked in inventory."
+            insight={
+              <p>
+                This breaks down the school's recorded cash support by source
+                type. A large slice means the school is relying more heavily
+                on that source, while restricted donations should still be
+                checked against their stated purpose before use.
+              </p>
+            }
           >
             <DonutChart
               points={charts.income.distribution}
@@ -334,6 +374,23 @@ export function Dashboard({
           eyebrow="PURCHASE PIPELINE"
           title="From need to fulfilment"
           subtitle="Every request, grouped by its current stage."
+          insight={
+            <p>
+              There are <strong>{charts.requests.records}</strong> purchase
+              requests in this view.{" "}
+              {leadingRequestStage ? (
+                <>
+                  The largest stage is{" "}
+                  <strong>{leadingRequestStage.label}</strong> with{" "}
+                  <strong>{leadingRequestStage.value}</strong> requests. If
+                  Draft or Submitted dominates, that is a sign requests are
+                  waiting to move forward.
+                </>
+              ) : (
+                <>No purchase requests have been recorded yet.</>
+              )}
+            </p>
+          }
         >
           <DonutChart
             points={charts.requests.distribution}
