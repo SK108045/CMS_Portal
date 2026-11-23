@@ -4074,6 +4074,13 @@ header {
 }
 
 .analytics-focus-insight {
+  position: static;
+  inset: auto;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  color: #40564a;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 16px;
