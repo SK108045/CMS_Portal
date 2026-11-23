@@ -4206,3 +4206,354 @@ header {
     opacity: 1 !important;
   }
 }
+
+
+/* High-contrast visibility pass: dark readable text across the portal */
+@media screen {
+  :root {
+    color: #121814;
+    font-size: 17px;
+  }
+
+  body,
+  .main,
+  .content,
+  dialog {
+    color: #121814;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .page-heading h1,
+  .welcome h1,
+  .chart-heading h2,
+  .modal-head h2,
+  .section-heading h2,
+  .recent-section h2 {
+    color: #0b110e;
+    font-weight: 800;
+  }
+
+  p,
+  .welcome p,
+  .page-heading p,
+  .section-heading p,
+  .chart-heading p,
+  .workflow p,
+  .history p,
+  .analytics-focus-intro p,
+  .analytics-focus-insight p {
+    color: #202923;
+    font-size: 15px;
+  }
+
+  small,
+  .muted,
+  .detail-grid small,
+  .history small,
+  .metric small,
+  .recent small,
+  .request-preview > small,
+  .approval-request small,
+  .approval-summary small,
+  .approval-footer,
+  .chart-readout,
+  .trend-tooltip,
+  .analytics-footnote {
+    color: #303b35;
+  }
+
+  .eyebrow,
+  .chart-eyebrow,
+  .analytics-focus-insight > span,
+  .analytics-focus-badge {
+    color: #314239;
+    font-weight: 900;
+  }
+
+  header {
+    color: #26332c;
+    font-size: 14px;
+  }
+
+  header strong {
+    color: #0e1712;
+    font-weight: 800;
+  }
+
+  footer {
+    color: #344138;
+    font-size: 13px;
+  }
+
+  label {
+    color: #151e19;
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  input,
+  select,
+  textarea {
+    color: #0b110e;
+    font-size: 15.5px;
+    font-weight: 600;
+    border-color: #9eaaa2;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #4b5851;
+  }
+
+  button,
+  .button {
+    color: #17231d;
+    font-size: 14.5px;
+    font-weight: 800;
+  }
+
+  .primary {
+    color: #fff;
+  }
+
+  .link,
+  .chart-text-link,
+  .document-link,
+  .approval-all,
+  .approval-footer a {
+    color: #174e39;
+    font-weight: 800;
+  }
+
+  .metric-top,
+  .quick-stats span,
+  .budget-line span,
+  .budget-line small,
+  .position-key,
+  .live-data {
+    color: #28362f;
+  }
+
+  .metric strong,
+  .quick-stats strong,
+  .analytics-stats strong,
+  .position-banner h2 {
+    color: #0d1711;
+  }
+
+  .metric-3,
+  .metric-3 strong,
+  .metric-3 .metric-top,
+  .metric-3 small {
+    color: #fff;
+  }
+
+  .attention strong,
+  .chart-clear strong,
+  .request-preview > strong,
+  .recent strong {
+    color: #101914;
+  }
+
+  .attention span,
+  .chart-clear p {
+    color: #27342d;
+  }
+
+  .badge {
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  th,
+  th button {
+    color: #17231d;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  td {
+    color: #151f1a;
+    font-size: 14.5px;
+    font-weight: 600;
+  }
+
+  .table-tools > span,
+  .pagination span {
+    color: #2e3b34;
+  }
+
+  .detail-grid strong {
+    color: #101914;
+    font-size: 14.5px;
+    font-weight: 700;
+  }
+
+  .error {
+    color: #7b2117;
+    font-weight: 700;
+  }
+
+  .empty,
+  .loading,
+  .chart-empty,
+  .chart-clear {
+    color: #26332c;
+  }
+
+  .chart-tick {
+    fill: #26322b;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .chart-category {
+    fill: #152019;
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .chart-series-key,
+  .chart-year {
+    color: #1e2b24;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .chart-series-key small {
+    color: #334139;
+  }
+
+  .chart-legend-list span {
+    color: #17231c;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .chart-legend-list strong {
+    color: #0f1913;
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .chart-legend-list small {
+    color: #26362d;
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+
+  .donut-center > span {
+    color: #26352d;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .donut-center strong {
+    color: #102018;
+    font-weight: 900;
+  }
+
+  .donut-center > small {
+    color: #334139;
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+
+  .trend-tooltip,
+  .chart-readout {
+    color: #1f2b24;
+    font-size: 13px;
+  }
+
+  .trend-tooltip strong,
+  .trend-tooltip b,
+  .chart-readout strong {
+    color: #0e1812;
+    font-weight: 900;
+  }
+
+  .chart-data summary {
+    color: #26352d;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .approval-heading p,
+  .approval-request p {
+    color: #24322b;
+  }
+
+  .approval-request h3,
+  .approval-request-decision > strong,
+  .approval-summary strong {
+    color: #0c1711;
+    font-weight: 900;
+  }
+
+  .approval-request-meta {
+    color: #2f3c35;
+  }
+
+  .approval-secondary button {
+    color: #1d3026;
+  }
+
+  .analytics-focus-insight {
+    color: #15231b;
+  }
+
+  .analytics-focus-insight strong {
+    color: #07110c;
+    font-weight: 900;
+  }
+
+  .login-form p,
+  .login-form .muted {
+    color: #28352e;
+  }
+
+  /* Keep text readable against the intentionally dark navigation/login surfaces. */
+  aside,
+  aside .brand,
+  aside nav a,
+  aside .portal-label,
+  aside .sidebar-bottom strong,
+  aside .sidebar-bottom small,
+  .login-story,
+  .login-story h1,
+  .login-story p,
+  .login-story small,
+  .login-story .eyebrow {
+    color: #f4f8f5;
+  }
+
+  aside nav a {
+    font-size: 14.5px;
+    font-weight: 700;
+  }
+
+  aside nav a.selected {
+    color: #fff;
+    font-weight: 900;
+  }
+}
+
+@media screen and (max-width: 760px) {
+  :root {
+    font-size: 16px;
+  }
+
+  p,
+  .welcome p,
+  .page-heading p,
+  .chart-heading p {
+    font-size: 14.5px;
+  }
+
+  td {
+    font-size: 14px;
+  }
+}
