@@ -208,6 +208,14 @@ export function Dashboard({
               eyebrow="STORES & DEPARTMENT INVENTORY"
               title="Stock at a glance"
               subtitle="Quantities use each item's own unit."
+              insight={
+                <p>
+                  This compares current stock quantities across the most
+                  significant items. Longer bars mean more units are on hand,
+                  while very short bars may indicate items that need
+                  replenishment soon.
+                </p>
+              }
             >
               <BarChart
                 points={stock.comparison}
@@ -249,6 +257,13 @@ export function Dashboard({
             <ChartCard
               eyebrow="INVENTORY CLASSIFICATIONS"
               title="Resources in stores"
+              insight={
+                <p>
+                  This shows how stored resources are distributed by
+                  classification. A dominant slice means that type currently
+                  makes up most of the recorded inventory.
+                </p>
+              }
             >
               <DonutChart
                 points={stock.distribution}
@@ -403,6 +418,7 @@ export function Dashboard({
           eyebrow="MANAGEMENT ATTENTION"
           title="Keep the trail complete"
           subtitle="Follow up on evidence, approvals and budget pressure."
+          expandable={false}
         >
           <div className="attention-list">
             {data.missingEvidence > 0 && (
