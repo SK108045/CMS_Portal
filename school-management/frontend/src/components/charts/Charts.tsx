@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { kes } from "../../api";
 export type Point = {
   key: string;
@@ -65,7 +65,7 @@ export function ChartCard({
   className?: string;
 }) {
   return (
-    <section className={"chart-card " + className}>
+    <section className={"chart-card chart-card-enter " + className}>
       <div className="chart-heading">
         <div>
           {eyebrow && <span className="chart-eyebrow">{eyebrow}</span>}
@@ -170,7 +170,12 @@ export function DonutChart({
                   strokeDasharray={`${Math.max(0.1, length - (points.length > 1 ? 3 : 0))} ${circumference}`}
                   strokeDashoffset={-position}
                   transform="rotate(-90 95 95)"
-                  className="donut-segment"
+                  className="donut-segment donut-segment-enter"
+                  style={{
+                    "--donut-start": String(circumference),
+                    "--donut-final": String(-position),
+                    animationDelay: `${i * 85}ms`,
+                  } as CSSProperties}
                   onMouseEnter={() => setActive(i)}
                   onMouseLeave={() => setActive(null)}
                 >
@@ -201,7 +206,10 @@ export function DonutChart({
           {points.map((p, i) => (
             <button
               key={p.key}
-              className={active === i ? "active" : ""}
+              className={
+                "chart-legend-item " + (active === i ? "active" : "")
+              }
+              style={{ animationDelay: `${180 + i * 65}ms` }}
               onMouseEnter={() => setActive(i)}
               onMouseLeave={() => setActive(null)}
               onFocus={() => setActive(i)}
@@ -381,6 +389,10 @@ export function BarChart({
                       rx="3"
                       fill={[palette[0], palette[1], "#e1e8d9"][j]}
                       opacity={hover !== null && hover !== i ? 0.55 : 1}
+                      className="chart-bar-enter"
+                      style={{
+                        animationDelay: `${90 + i * 80 + j * 45}ms`,
+                      }}
                     />
                   );
                 })}
@@ -587,6 +599,7 @@ export function TrendChart({
               <path
                 d={path("spent") + ` L${x(plotEnd)},${y(0)} L${x(0)},${y(0)} Z`}
                 fill={`url(#${gradient})`}
+                className="trend-area-enter"
               />
               {income.length > 0 && (
                 <path
@@ -596,6 +609,7 @@ export function TrendChart({
                   strokeWidth="2.5"
                   strokeDasharray="6 5"
                   strokeLinejoin="round"
+                  className="trend-income-enter"
                 />
               )}
               <path
@@ -604,6 +618,9 @@ export function TrendChart({
                 stroke={palette[0]}
                 strokeWidth="3"
                 strokeLinejoin="round"
+                pathLength={1}
+                strokeDasharray="1"
+                className="trend-line-enter"
               />
               {points.map((p, i) => (
                 <g
@@ -635,6 +652,18 @@ export function TrendChart({
                       y1={top}
                       y2={y(0)}
                       stroke="#b7c8ac"
+                      className="trend-focus-line"
+                    />
+                  )}
+                  {year === today.getFullYear() && i === lastRecorded && i <= plotEnd && (
+                    <circle
+                      cx={x(i)}
+                      cy={y(p.spent)}
+                      r="8"
+                      fill="none"
+                      stroke={palette[0]}
+                      strokeWidth="1.5"
+                      className="trend-live-pulse"
                     />
                   )}
                   {i <= plotEnd && (
@@ -645,6 +674,8 @@ export function TrendChart({
                       fill={palette[0]}
                       stroke="#fff"
                       strokeWidth="2"
+                      className="trend-point-enter"
+                      style={{ animationDelay: `${500 + i * 55}ms` }}
                     />
                   )}
                   {income.length > 0 && p.income > 0 && (
@@ -655,6 +686,8 @@ export function TrendChart({
                       fill={palette[1]}
                       stroke="#fff"
                       strokeWidth="2"
+                      className="trend-point-enter trend-point-income"
+                      style={{ animationDelay: `${610 + i * 55}ms` }}
                     />
                   )}
                   <text
