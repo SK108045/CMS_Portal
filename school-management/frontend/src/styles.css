@@ -3499,3 +3499,409 @@ header {
     stroke-dashoffset: var(--donut-final) !important;
   }
 }
+
+
+/* Expanded analytics focus mode */
+.chart-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-shrink: 0;
+}
+
+.chart-expand-button {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid #d7e1d6;
+  background: #f7faf5;
+  color: #4f6c58;
+  box-shadow: 0 1px 2px #17391908;
+  transition:
+    transform 180ms cubic-bezier(.2,.8,.2,1),
+    background 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.chart-expand-button:hover {
+  transform: translateY(-2px) scale(1.04);
+  background: #edf4eb;
+  border-color: #b9cdbb;
+  color: #245b48;
+  box-shadow: 0 7px 16px #17391913;
+}
+
+.chart-expand-button:active {
+  transform: translateY(0) scale(.97);
+}
+
+.analytics-focus-modal {
+  width: min(1380px, 96vw);
+  max-width: none;
+  max-height: 94vh;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fbfcf9;
+  box-shadow:
+    0 35px 110px #10281f45,
+    0 8px 26px #10281f18;
+  animation: analyticsModalIn 360ms cubic-bezier(.16,1,.3,1) both;
+}
+
+.analytics-focus-modal::backdrop {
+  background: #10271f80;
+  backdrop-filter: blur(7px) saturate(.8);
+  animation: analyticsBackdropIn 300ms ease-out both;
+}
+
+.analytics-focus-modal.dialog-closing {
+  animation: analyticsModalOut 180ms ease-in both;
+}
+
+.analytics-focus-modal.dialog-closing::backdrop {
+  animation: analyticsBackdropOut 180ms ease-in both;
+}
+
+.analytics-focus-modal .modal-head {
+  padding: 20px 26px;
+  background: rgba(255,255,255,.94);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid #dfe7dc;
+}
+
+.analytics-focus-modal .modal-head h2 {
+  font-size: 24px;
+  color: #173a2d;
+  letter-spacing: -.35px;
+}
+
+.analytics-focus-modal .modal-head button {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  font-size: 17px;
+  color: #4b6257;
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.analytics-focus-modal .modal-head button:hover {
+  background: #edf3eb;
+  transform: rotate(4deg) scale(1.04);
+}
+
+.analytics-focus-modal .modal-content {
+  padding: 0;
+  max-height: calc(94vh - 72px);
+  overflow: auto;
+}
+
+.analytics-focus-shell {
+  min-height: 600px;
+  padding: 28px 34px 34px;
+  background:
+    radial-gradient(circle at 85% 10%, #eef4e8 0, transparent 30%),
+    linear-gradient(180deg, #fbfcf9 0%, #f7f9f4 100%);
+}
+
+.analytics-focus-intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 2px 2px 20px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid #e1e8dd;
+  animation: focusIntroIn 420ms 80ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.analytics-focus-intro p {
+  margin: 7px 0 0;
+  max-width: 780px;
+  font-size: 14px;
+  color: #5a6d62;
+}
+
+.analytics-focus-badge {
+  flex-shrink: 0;
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: #e7efe3;
+  border: 1px solid #d1decf;
+  color: #4f6c54;
+  font-size: 10px;
+  letter-spacing: 1.25px;
+  font-weight: 800;
+}
+
+.analytics-focus-visual {
+  background: #fff;
+  border: 1px solid #dce5d9;
+  border-radius: 16px;
+  padding: 30px 32px 22px;
+  min-height: 500px;
+  box-shadow:
+    0 16px 40px #1739190b,
+    inset 0 1px #ffffff;
+  animation: focusVisualIn 520ms 100ms cubic-bezier(.16,1,.3,1) both;
+}
+
+.analytics-focus-visual .trend-canvas svg {
+  min-height: 390px;
+}
+
+.analytics-focus-visual .bar-chart-wrap {
+  min-height: 390px;
+  display: flex;
+  align-items: center;
+}
+
+.analytics-focus-visual .bar-chart {
+  min-height: 390px;
+}
+
+.analytics-focus-visual .donut-layout {
+  grid-template-columns: minmax(280px, 390px) minmax(320px, 1fr);
+  gap: 48px;
+  min-height: 480px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.analytics-focus-visual .donut-stage {
+  max-width: 390px;
+  width: 100%;
+  justify-self: center;
+}
+
+.analytics-focus-visual .donut-center > span {
+  font-size: 14px;
+}
+
+.analytics-focus-visual .donut-center strong {
+  font-size: 38px;
+}
+
+.analytics-focus-visual .donut-center > small {
+  font-size: 12px;
+}
+
+.analytics-focus-visual .chart-legend-list {
+  max-height: 440px;
+  gap: 8px;
+  justify-content: center;
+}
+
+.analytics-focus-visual .chart-legend-list button {
+  padding: 12px 10px;
+  grid-template-columns: 10px minmax(0, 1fr) 52px;
+}
+
+.analytics-focus-visual .chart-legend-list span {
+  font-size: 14px;
+}
+
+.analytics-focus-visual .chart-legend-list strong {
+  font-size: 15px;
+}
+
+.analytics-focus-visual .chart-legend-list small {
+  font-size: 13px;
+}
+
+.analytics-focus-visual .chart-series-key {
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+
+.analytics-focus-visual .chart-tick {
+  font-size: 13px;
+}
+
+.analytics-focus-visual .chart-category {
+  font-size: 14px;
+}
+
+.analytics-focus-visual .trend-tooltip,
+.analytics-focus-visual .chart-readout {
+  min-height: 56px;
+  font-size: 13px;
+  padding: 15px 0 10px;
+}
+
+.analytics-focus-visual .chart-data {
+  margin-top: 15px;
+}
+
+@keyframes analyticsModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(.965);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes analyticsModalOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(14px) scale(.985);
+  }
+}
+
+@keyframes analyticsBackdropIn {
+  from {
+    background: #10271f00;
+    backdrop-filter: blur(0);
+  }
+  to {
+    background: #10271f80;
+    backdrop-filter: blur(7px) saturate(.8);
+  }
+}
+
+@keyframes analyticsBackdropOut {
+  from {
+    background: #10271f80;
+    backdrop-filter: blur(7px) saturate(.8);
+  }
+  to {
+    background: #10271f00;
+    backdrop-filter: blur(0);
+  }
+}
+
+@keyframes focusIntroIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes focusVisualIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 900px) {
+  .analytics-focus-modal {
+    width: 96vw;
+    max-height: 92vh;
+    border-radius: 14px;
+  }
+
+  .analytics-focus-shell {
+    min-height: 0;
+    padding: 20px;
+  }
+
+  .analytics-focus-visual {
+    min-height: 0;
+    padding: 22px 18px 16px;
+  }
+
+  .analytics-focus-visual .trend-canvas svg,
+  .analytics-focus-visual .bar-chart,
+  .analytics-focus-visual .bar-chart-wrap {
+    min-height: 300px;
+  }
+
+  .analytics-focus-visual .donut-layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 20px;
+    min-height: 340px;
+  }
+
+  .analytics-focus-intro {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 620px) {
+  .chart-heading-actions {
+    gap: 6px;
+  }
+
+  .chart-expand-button {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+  }
+
+  .analytics-focus-modal {
+    width: 98vw;
+    max-height: 94vh;
+  }
+
+  .analytics-focus-modal .modal-head {
+    padding: 16px 18px;
+  }
+
+  .analytics-focus-modal .modal-head h2 {
+    font-size: 19px;
+  }
+
+  .analytics-focus-shell {
+    padding: 15px;
+  }
+
+  .analytics-focus-visual {
+    padding: 18px 12px 12px;
+  }
+
+  .analytics-focus-visual .donut-layout {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .analytics-focus-visual .donut-stage {
+    max-width: 270px;
+  }
+
+  .analytics-focus-visual .chart-legend-list {
+    max-height: 280px;
+  }
+
+  .analytics-focus-badge {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .analytics-focus-modal,
+  .analytics-focus-modal::backdrop,
+  .analytics-focus-modal.dialog-closing,
+  .analytics-focus-modal.dialog-closing::backdrop,
+  .analytics-focus-intro,
+  .analytics-focus-visual,
+  .chart-expand-button {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
