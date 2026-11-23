@@ -58,6 +58,7 @@ export function ChartCard({
   children,
   action,
   insight,
+  expandable = true,
   className = "",
 }: {
   eyebrow?: string;
@@ -66,6 +67,7 @@ export function ChartCard({
   children: React.ReactNode;
   action?: React.ReactNode;
   insight?: React.ReactNode;
+  expandable?: boolean;
   className?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -81,21 +83,23 @@ export function ChartCard({
           </div>
           <div className="chart-heading-actions">
             {action}
-            <button
-              type="button"
-              className="chart-expand-button"
-              onClick={() => setExpanded(true)}
-              aria-label={`Expand ${title} chart`}
-              title="Expand chart"
-            >
-              <Maximize2 size={18} />
-            </button>
+            {expandable && (
+              <button
+                type="button"
+                className="chart-expand-button"
+                onClick={() => setExpanded(true)}
+                aria-label={`Expand ${title} chart`}
+                title="Expand chart"
+              >
+                <Maximize2 size={18} />
+              </button>
+            )}
           </div>
         </div>
         {children}
       </section>
 
-      {expanded && (
+      {expandable && expanded && (
         <Modal
           title={title}
           onClose={() => setExpanded(false)}
