@@ -57,6 +57,7 @@ export function ChartCard({
   subtitle,
   children,
   action,
+  insight,
   className = "",
 }: {
   eyebrow?: string;
@@ -64,6 +65,7 @@ export function ChartCard({
   subtitle?: string;
   children: React.ReactNode;
   action?: React.ReactNode;
+  insight?: React.ReactNode;
   className?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -108,6 +110,12 @@ export function ChartCard({
               <span className="analytics-focus-badge">EXPANDED ANALYTICS</span>
             </div>
             <div className="analytics-focus-visual">{children}</div>
+            {insight && (
+              <aside className="analytics-focus-insight">
+                <span>WHAT THIS TELLS YOU</span>
+                <div>{insight}</div>
+              </aside>
+            )}
           </div>
         </Modal>
       )}
